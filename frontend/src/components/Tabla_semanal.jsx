@@ -1,11 +1,12 @@
 // src/components/tabla_semanal.jsx
-// IMPORTACIÓN CLAVE
 import { Droppable } from '@hello-pangea/dnd';
 
-export function TablaSemanal({ enfermeros, diasSemana, turnosAsignados }) {
+// 1. JUANI: Recibí la nueva prop 'onEliminarTurno' acá:
+export function TablaSemanal({ enfermeros, diasSemana, turnosAsignados, onEliminarTurno }) {
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
       
+      {/* Cabecera ... (sin cambios) */}
       <div className="grid grid-cols-8 bg-slate-800 text-white divide-x divide-slate-600">
         <div className="p-4 font-bold text-center flex items-center justify-center">Enfermero</div>
         {diasSemana.map(dia => (
@@ -16,6 +17,7 @@ export function TablaSemanal({ enfermeros, diasSemana, turnosAsignados }) {
         ))}
       </div>
 
+      {/* Cuerpo ... */}
       <div className="divide-y divide-slate-200">
         {enfermeros.map(enfermero => (
           <div key={enfermero.id} className="grid grid-cols-8 divide-x divide-slate-200 hover:bg-slate-50 transition-colors">
@@ -24,10 +26,9 @@ export function TablaSemanal({ enfermeros, diasSemana, turnosAsignados }) {
               {enfermero.nombre}
             </div>
 
-            {/* ZONAS DE ATERRIZAJE (DROPPABLES) */}
             {diasSemana.map(dia => {
-              // EL ID CRÍTICO: "e1-2026-03-16". Esto es lo que va a leer tu App.jsx
               const celdaId = `${enfermero.id}-${dia.id}`;
+              const turnosEnEstaCelda = turnosAsignados[celdaId] || [];
               
               return (
                 <Droppable key={celdaId} droppableId={celdaId}>
@@ -35,13 +36,20 @@ export function TablaSemanal({ enfermeros, diasSemana, turnosAsignados }) {
                     <div 
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      // Si la ficha está pasando por encima, la celda se pinta de verde clarito
-                      className={`p-2 min-h-[100px] flex flex-col gap-2 transition-colors ${snapshot.isDraggingOver ? 'bg-green-50 ring-2 ring-green-400 inset-0' : ''}`}
+                      className={`p-2 min-h-[100px] flex flex-col gap-1 transition-colors ${snapshot.isDraggingOver ? 'bg-green-50 ring-2 inset-0' : ''}`}
                     >
                       
-                      {/* Acá se dibujarán los turnos asignados más adelante */}
-                      
-                      {/* VITAL: El placeholder evita que la celda colapse */}
+                      {turnosEnEstaCelda.map((turno) => (
+                        <div 
+                          key={turno.id_unico} 
+                          onDoubleClick={() => onEliminarTurno(celdaId, turno.id_unico)}
+                          // Acá está la magia: al final le inyectamos ${turno.color} sin pisarlo con nada
+                          className={`text-xs p-2 rounded border font-bold text-center shadow-sm cursor-pointer transition-all hover:bg-red-200 hover:border-red-500 hover:text-red-900 hover:line-through ${turno.color}`}
+                          title="Doble clic para eliminar"
+                        >
+                          {turno.nombre}
+                        </div>
+                      ))}
                       {provided.placeholder}
                     </div>
                   )}

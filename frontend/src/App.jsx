@@ -19,6 +19,9 @@ const generarDiasSemana = () => {
   });
 };
 
+/* Consultar si tambien hay que agregar licencia en tipos de turno, es decir que pueda faltar por
+licencia de maternidad por ejemplo. (SÍ, agregalo acá abajo como un turno más) */
+
 const tiposTurno = [
   { id: 'TM', nombre: 'Mañana (06-14)', color: 'bg-blue-200 text-blue-900 border-blue-400' },
   { id: 'TT', nombre: 'Tarde (14-22)', color: 'bg-orange-200 text-orange-900 border-orange-400' },
@@ -26,6 +29,7 @@ const tiposTurno = [
   { id: 'FR', nombre: 'Franco', color: 'bg-gray-300 text-gray-700 border-gray-500' }
 ];
 
+//Obtener de Supabase
 const enfermerosFake = [
   { id: 'e1', nombre: 'Juan Pérez' },
   { id: 'e2', nombre: 'Ana Gómez' },
@@ -36,33 +40,130 @@ export default function App() {
   const [enfermeros] = useState(enfermerosFake);
   const [semanaActual] = useState(generarDiasSemana());
   
-  // Memoria para guardar dónde cae cada ficha (se lo pasamos a Juani)
+  // Memoria para guardar dónde cae cada ficha
   const [turnosAsignados, setTurnosAsignados] = useState({});
 
-  // El cerebro físico. Qué pasa cuando soltás el clic.
-  const alSoltarFicha = (resultado) => {
-    const { destination, source, draggableId } = resultado;
-    
-    // Si la soltaste fuera de la tabla, no hacemos nada
-    if (!destination) return;
+  // 1. FUNCIÓN PARA EL BORRADOR
+  const guardarBorrador = async () => {
+    console.log("Datos crudos para el borrador (JSON completo):", turnosAsignados);
+    alert("Progreso guardado localmente. Revisá la consola.");
+  };
 
-    // Solo para que veas en la consola que funciona antes de programar la base de datos
-    console.log(`Tiraste el turno ${draggableId} en la celda: ${destination.droppableId}`);
+  // 2. FUNCIÓN PARA PUBLICAR
+  const publicarSemana = async () => {
+    const turnosParaBD = [];
+    
+    Object.entries(turnosAsignados).forEach(([celdaId, turnos]) => {
+      const [enfermero_id, fecha] = celdaId.split('-'); // El hachazo
+      turnos.forEach(turno => {
+        turnosParaBD.push({
+          enfermero_id: enfermero_id,
+          fecha: fecha,
+          tipo_turno_id: turno.tipo_id
+        });
+      });
+    });
+
+    console.log("Bulk Insert listo para la tabla turnos_asignados:", turnosParaBD);
+    alert(`¡Semana publicada! Se enviarán ${turnosParaBD.length} turnos a la base de datos. Revisá la consola.`);
+  };
+
+  // 3. EL CEREBRO FÍSICO (Actualizado con Optimistic UI)
+  const alSoltarFicha = (resultado) => {
+    const { destination, draggableId } = resultado;
+    
+    // Si la soltaste fuera de la tabla o en el banco de fichas, cortamos
+    if (!destination || destination.droppableId === 'banco-fichas') return;
+
+    const celdaId = destination.droppableId; // Ej: "e2-2026-03-17"
+    const infoTurno = tiposTurno.find(t => t.id === draggableId);
+    
+    // Generamos un ID único para la ficha clonada (necesario para React)
+    const turnoNuevo = {
+      id_unico: crypto.randomUUID(),
+      tipo_id: infoTurno.id,
+      nombre: infoTurno.nombre,
+      color: infoTurno.color
+    };
+
+    // Actualizamos el diccionario sumando el turno a la celda elegida
+    setTurnosAsignados(estadoAnterior => {
+      const turnosEnCelda = estadoAnterior[celdaId] || [];
+      return {
+        ...estadoAnterior,
+        [celdaId]: [...turnosEnCelda, turnoNuevo]
+      };
+    });
+  };
+
+  // NUEVA FUNCIÓN: El exterminador de turnos
+  const eliminarTurno = (celdaId, idUnicoTurno) => {
+    setTurnosAsignados(estadoAnterior => {
+      // 1. Obtenemos la lista actual de esa celda
+      const turnosActuales = estadoAnterior[celdaId] || [];
+      
+      // 2. Filtramos la lista, sacando el turno que coincide con el ID que queremos matar
+      // (Por eso es VITAL el crypto.randomUUID() que pusimos antes)
+      const turnosActualizados = turnosActuales.filter(turno => turno.id_unico !== idUnicoTurno);
+      
+      // 3. Devolvemos el estado nuevo
+      return {
+        ...estadoAnterior,
+        [celdaId]: turnosActualizados
+      };
+    });
   };
 
   return (
-    // EL PARAGUAS GLOBAL. Envuelve absolutamente todo.
+    // EL PARAGUAS GLOBAL
     <DragDropContext onDragEnd={alSoltarFicha}>
       <div className="min-h-screen bg-slate-100 p-8 font-sans">
-        <h1 className="text-3xl font-black text-slate-800 mb-6">Planilla Semanal de Turnos</h1>
+        
+        {/* CABECERA NUEVA CON LOS BOTONES */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-black text-slate-800">Planilla Semanal de Turnos</h1>
+          <div className="flex gap-4">
+            <button 
+              onClick={guardarBorrador}
+              className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded shadow hover:bg-slate-300 transition-colors"
+            >
+              Guardar Borrador
+            </button>
+            <button 
+              onClick={publicarSemana}
+              className="px-4 py-2 bg-blue-600 text-white font-bold rounded shadow hover:bg-blue-700 transition-colors"
+            >
+              Publicar Semana
+            </button>
+          </div>
+        </div>
 
         <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
             Arrastrar Fichas de Turno
           </h2>
           
-          {/* EL BANCO SE VUELVE DROPPABLE (Para que reconozca a los hijos). isDropDisabled evita que tiremos cosas adentro */}
-          <Droppable droppableId="banco-fichas" direction="horizontal" isDropDisabled={true}>
+          <Droppable 
+            droppableId="banco-fichas" 
+            direction="horizontal" 
+            isDropDisabled={true}
+            // MAGIA NEGRA PARA FICHAS INFINITAS:
+            renderClone={(provided, snapshot, rubric) => {
+              // rubric.source.index nos dice qué ficha agarró del arreglo
+              const turno = tiposTurno[rubric.source.index];
+              return (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.draggableProps}
+                  {...provided.dragHandleProps}
+                  // El clon se agranda un poco para que sepas que lo tenés agarrado
+                  className={`px-4 py-2 rounded-md border font-bold text-sm shadow-xl scale-110 z-50 ${turno.color}`}
+                >
+                  {turno.nombre}
+                </div>
+              );
+            }}
+          >
             {(provided) => (
               <div 
                 ref={provided.innerRef} 
@@ -70,15 +171,15 @@ export default function App() {
                 className="flex gap-4 min-h-[50px]"
               >
                 {tiposTurno.map((turno, index) => (
-                  // CADA FICHA SE VUELVE DRAGGABLE
                   <Draggable key={turno.id} draggableId={turno.id} index={index}>
                     {(provided, snapshot) => (
+                      // LA FICHA ORIGINAL QUE SE QUEDA CLAVADA EN EL BANCO
                       <div 
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        // Le damos un efecto de sombra cuando la estás agarrando
-                        className={`px-4 py-2 rounded-md border font-bold ${turno.color} ${snapshot.isDragging ? 'shadow-xl scale-110 z-50' : 'shadow-sm'}`}
+                        // Truco visual: Si estás arrastrando una copia, atenuamos la original
+                        className={`px-4 py-2 rounded-md border font-bold text-sm shadow-sm transition-opacity ${turno.color} ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'}`}
                       >
                         {turno.nombre}
                       </div>
@@ -89,10 +190,14 @@ export default function App() {
               </div>
             )}
           </Droppable>
-
         </div>
 
-        <TablaSemanal enfermeros={enfermeros} diasSemana={semanaActual} turnosAsignados={turnosAsignados} />
+        <TablaSemanal 
+        enfermeros={enfermeros} 
+        diasSemana={semanaActual} 
+        turnosAsignados={turnosAsignados} 
+        onEliminarTurno={eliminarTurno}
+        />
       </div>
     </DragDropContext>
   );

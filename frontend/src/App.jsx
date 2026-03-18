@@ -1,120 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useState, useEffect } from 'react'
+/*Para llamar a supabase es con ./ */
+import { supabase } from './supabase/client'
+import { TablaSemanal } from './components/tabla_semanal';
 
-function App() {
-  const [count, setCount] = useState(0)
+// El motor que calcula las fechas dinámicamente
+const generarDiasSemana = () => {
+  const hoy = new Date();
+  const diaSemana = hoy.getDay(); 
+  const diferencia = hoy.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+  const lunes = new Date(hoy.setDate(diferencia));
+
+  const nombresDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  
+  return nombresDias.map((nombre, index) => {
+    const fecha = new Date(lunes);
+    fecha.setDate(lunes.getDate() + index);
+    
+    // Formato 'YYYY-MM-DD' listo para inyectar en Supabase
+    const fechaSQL = fecha.toISOString().split('T')[0];
+    
+    return {
+      id: fechaSQL,
+      nombre: nombre,
+      numero: fecha.getDate()
+    };
+  });
+};
+
+const tiposTurno = [
+  { id: 'TM', nombre: 'Mañana (06-14)', color: 'bg-blue-200 text-blue-900 border-blue-400' },
+  { id: 'TT', nombre: 'Tarde (14-22)', color: 'bg-orange-200 text-orange-900 border-orange-400' },
+  { id: 'TN', nombre: 'Noche (22-06)', color: 'bg-purple-200 text-purple-900 border-purple-400' },
+  { id: 'FR', nombre: 'Franco', color: 'bg-gray-300 text-gray-700 border-gray-500' }
+];
+
+const enfermerosFake = [
+  { id: 'e1', nombre: 'Juan Pérez' },
+  { id: 'e2', nombre: 'Ana Gómez' },
+  { id: 'e3', nombre: 'Carlos López' }
+];
+
+export default function App() {
+  const [enfermeros] = useState(enfermerosFake);
+  const [semanaActual] = useState(generarDiasSemana());
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="min-h-screen bg-slate-100 p-8 font-sans">
+      <h1 className="text-3xl font-black text-slate-800 mb-6">Planilla Semanal de Turnos</h1>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* EL BANCO DE FICHAS */}
+      <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-slate-200">
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+          Arrastrar Fichas de Turno
+        </h2>
+        <div className="flex gap-4">
+          {tiposTurno.map(turno => (
+            <div 
+              key={turno.id} 
+              className={`px-4 py-2 rounded-md border shadow-sm font-bold cursor-grab transition-transform hover:scale-105 ${turno.color}`}
+            >
+              {turno.nombre}
+            </div>
+          ))}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* LA MATRIZ PRINCIPAL */}
+      <TablaSemanal enfermeros={enfermeros} diasSemana={semanaActual} />
+
+    </div>
+  );
 }
-
-export default App

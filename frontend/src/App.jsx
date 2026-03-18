@@ -1,29 +1,21 @@
-import { useState, useEffect } from 'react'
-/*Para llamar a supabase es con ./ */
+// src/App.jsx
+import { useState } from 'react';
 import { supabase } from './supabase/client'
+// IMPORTACIÓN CLAVE
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { TablaSemanal } from './components/tabla_semanal';
 
-// El motor que calcula las fechas dinámicamente
 const generarDiasSemana = () => {
   const hoy = new Date();
   const diaSemana = hoy.getDay(); 
   const diferencia = hoy.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
   const lunes = new Date(hoy.setDate(diferencia));
-
   const nombresDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   
   return nombresDias.map((nombre, index) => {
     const fecha = new Date(lunes);
     fecha.setDate(lunes.getDate() + index);
-    
-    // Formato 'YYYY-MM-DD' listo para inyectar en Supabase
-    const fechaSQL = fecha.toISOString().split('T')[0];
-    
-    return {
-      id: fechaSQL,
-      nombre: nombre,
-      numero: fecha.getDate()
-    };
+    return { id: fecha.toISOString().split('T')[0], nombre: nombre, numero: fecha.getDate() };
   });
 };
 
@@ -43,31 +35,65 @@ const enfermerosFake = [
 export default function App() {
   const [enfermeros] = useState(enfermerosFake);
   const [semanaActual] = useState(generarDiasSemana());
+  
+  // Memoria para guardar dónde cae cada ficha (se lo pasamos a Juani)
+  const [turnosAsignados, setTurnosAsignados] = useState({});
+
+  // El cerebro físico. Qué pasa cuando soltás el clic.
+  const alSoltarFicha = (resultado) => {
+    const { destination, source, draggableId } = resultado;
+    
+    // Si la soltaste fuera de la tabla, no hacemos nada
+    if (!destination) return;
+
+    // Solo para que veas en la consola que funciona antes de programar la base de datos
+    console.log(`Tiraste el turno ${draggableId} en la celda: ${destination.droppableId}`);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-8 font-sans">
-      <h1 className="text-3xl font-black text-slate-800 mb-6">Planilla Semanal de Turnos</h1>
+    // EL PARAGUAS GLOBAL. Envuelve absolutamente todo.
+    <DragDropContext onDragEnd={alSoltarFicha}>
+      <div className="min-h-screen bg-slate-100 p-8 font-sans">
+        <h1 className="text-3xl font-black text-slate-800 mb-6">Planilla Semanal de Turnos</h1>
 
-      {/* EL BANCO DE FICHAS */}
-      <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-slate-200">
-        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-          Arrastrar Fichas de Turno
-        </h2>
-        <div className="flex gap-4">
-          {tiposTurno.map(turno => (
-            <div 
-              key={turno.id} 
-              className={`px-4 py-2 rounded-md border shadow-sm font-bold cursor-grab transition-transform hover:scale-105 ${turno.color}`}
-            >
-              {turno.nombre}
-            </div>
-          ))}
+        <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+            Arrastrar Fichas de Turno
+          </h2>
+          
+          {/* EL BANCO SE VUELVE DROPPABLE (Para que reconozca a los hijos). isDropDisabled evita que tiremos cosas adentro */}
+          <Droppable droppableId="banco-fichas" direction="horizontal" isDropDisabled={true}>
+            {(provided) => (
+              <div 
+                ref={provided.innerRef} 
+                {...provided.droppableProps} 
+                className="flex gap-4 min-h-[50px]"
+              >
+                {tiposTurno.map((turno, index) => (
+                  // CADA FICHA SE VUELVE DRAGGABLE
+                  <Draggable key={turno.id} draggableId={turno.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div 
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        // Le damos un efecto de sombra cuando la estás agarrando
+                        className={`px-4 py-2 rounded-md border font-bold ${turno.color} ${snapshot.isDragging ? 'shadow-xl scale-110 z-50' : 'shadow-sm'}`}
+                      >
+                        {turno.nombre}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+
         </div>
+
+        <TablaSemanal enfermeros={enfermeros} diasSemana={semanaActual} turnosAsignados={turnosAsignados} />
       </div>
-
-      {/* LA MATRIZ PRINCIPAL */}
-      <TablaSemanal enfermeros={enfermeros} diasSemana={semanaActual} />
-
-    </div>
+    </DragDropContext>
   );
 }

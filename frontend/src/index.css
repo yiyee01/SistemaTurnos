@@ -1,1 +1,63 @@
 @import "tailwindcss";
+
+/* Le decís a Tailwind que use la clase 'dark' en el html */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+    /* colores modo claro — estos son los defaults */
+    --color-marca-bg: #ffffff;
+    --color-marca-surface: #f4f9ee;
+    --color-marca-surface2: #e8f3d8;
+    --color-marca-border: #c8e0a0;
+    --color-marca-border2: #a8cc70;
+    --color-marca-dark: #e8f5d8;
+    --color-marca-base: #3B6D11;
+    --color-marca-mid: #639922;
+    --color-marca-light: #3B6D11;
+    --color-marca-pale: #1a3a06;
+    --color-marca-muted: #6b7a5a;
+    --color-marca-muted2: #8a9a70;
+}
+
+/* Modo oscuro — sobreescribe las variables cuando html tiene clase 'dark' */
+.dark {
+    --color-marca-bg: #0d1117;
+    --color-marca-surface: #161b22;
+    --color-marca-surface2: #1c2333;
+    --color-marca-border: #21291a;
+    --color-marca-border2: #2a3a1a;
+    --color-marca-dark: #173404;
+    --color-marca-base: #3B6D11;
+    --color-marca-mid: #639922;
+    --color-marca-light: #97C459;
+    --color-marca-pale: #e8f5d8;
+    --color-marca-muted: #5F5E5A;
+    --color-marca-muted2: #444441;
+}
+
+/* Scrollbar */
+@layer utilities {
+    .scrollbar-marca {
+        scrollbar-width: thin;
+        scrollbar-color: #3B6D11 #161b22;
+    }
+
+    .scrollbar-marca::-webkit-scrollbar {
+        height: 4px;
+        width: 4px;
+    }
+
+    .scrollbar-marca::-webkit-scrollbar-track {
+        background: #161b22;
+        border-radius: 99px;
+    }
+
+    .scrollbar-marca::-webkit-scrollbar-thumb {
+        background: #3B6D11;
+        border-radius: 99px;
+    }
+
+    .scrollbar-marca::-webkit-scrollbar-thumb:hover {
+        background: #639922;
+    }
+}

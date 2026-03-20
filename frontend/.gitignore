@@ -25,3 +25,4 @@ dist-ssr
 
 #Archivo con las credenciales de supabase
 .env
+.env.local

@@ -36,7 +36,7 @@ export function TablaSemanal({ enfermeros, diasSemana, turnosAsignados, onElimin
                     <div 
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`p-2 min-h-[100px] flex flex-col gap-1 transition-colors ${snapshot.isDraggingOver ? 'bg-green-50 ring-2 inset-0' : ''}`}
+                      className={`p-2 min-h-25 flex flex-col gap-1 transition-colors ${snapshot.isDraggingOver ? 'bg-green-50 ring-2 inset-0' : ''}`}
                     >
                       
                       {turnosEnEstaCelda.map((turno) => (

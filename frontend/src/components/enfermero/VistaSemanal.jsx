@@ -31,7 +31,7 @@ function getEtiqueta(offset) {
   return `${primero.getDate()} ${MESES[primero.getMonth()]} — ${ultimo.getDate()} ${MESES[ultimo.getMonth()]}`
 }
 
-export function VistaSemanal({ turnosAsignados, semanaOffset, onAnterior, onSiguiente }) {
+export function VistaSemanal({ turnosAsignados, semanaOffset, onAnterior, onSiguiente, onSeleccionarDia }) {
   const dias = getDiasSemana(semanaOffset)
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
@@ -67,6 +67,8 @@ export function VistaSemanal({ turnosAsignados, semanaOffset, onAnterior, onSigu
                 numeroDia={fecha.getDate()}
                 tipoTurno={tipoTurno}
                 esHoy={esHoy}
+                fechaStr={fechaStr}
+                onSeleccionarDia={onSeleccionarDia}
               />
             </div>
           )

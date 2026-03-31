@@ -19,18 +19,18 @@ const nombresTurno = {
   LI: 'Licencia',
 }
 
-export function TarjetaDia({ nombreDia, numeroDia, tipoTurno, esHoy }) {
+export function TarjetaDia({ nombreDia, numeroDia, tipoTurno, esHoy, onSeleccionarDia, fechaStr }) {
   const estilos = estilosTurno[tipoTurno] ?? 'bg-marca-surface2 text-marca-muted border-t-2 border-marca-border2'
-  const nombre  = nombresTurno[tipoTurno] ?? 'Sin turno'
+  const nombre = nombresTurno[tipoTurno] ?? 'Sin turno'
+  const tieneTurno = tipoTurno !== null
 
   return (
-    <div className={`flex flex-col rounded-xl overflow-hidden border
-                     ${esHoy
-                       ? 'border-marca-base'
-                       : 'border-marca-border'
-                     }`}>
-
-      {/* Encabezado del día */}
+    <div
+      onClick={() => tieneTurno && onSeleccionarDia(fechaStr)}
+      className={`flex flex-col rounded-xl overflow-hidden border transition-all
+                  ${esHoy ? 'border-marca-base' : 'border-marca-border'}
+                  ${tieneTurno ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+    >
       <div className="bg-marca-surface2 text-center py-2 px-3">
         <p className="text-xs font-medium uppercase tracking-widest text-marca-muted">
           {nombreDia}
@@ -41,11 +41,9 @@ export function TarjetaDia({ nombreDia, numeroDia, tipoTurno, esHoy }) {
         </p>
       </div>
 
-      {/* Bloque del turno */}
       <div className={`flex-1 flex items-center justify-center p-4 text-xs font-medium text-center ${estilos}`}>
         {nombre}
       </div>
-
     </div>
   )
 }

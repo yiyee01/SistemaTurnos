@@ -1,8 +1,8 @@
 // src/components/enfermero/CalendarioMensual.jsx
 import { NavegadorSemana } from './NavegadorSemana'
 
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 const estilosDia = {
   TM: 'bg-blue-950 text-blue-300',
@@ -13,7 +13,7 @@ const estilosDia = {
   LI: 'bg-yellow-950 text-yellow-300',
 }
 
-export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSiguiente }) {
+export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSiguiente, onSeleccionarDia }) {
   const hoy = new Date()
   const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + mesOffset, 1)
   const mes = fecha.getMonth()
@@ -43,7 +43,7 @@ export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSi
 
       {/* Días de la semana */}
       <div className="grid grid-cols-7 mb-2">
-        {['Lu','Ma','Mi','Ju','Vi','Sa','Do'].map(d => (
+        {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'].map(d => (
           <div key={d} className="text-center text-xs font-medium text-marca-muted py-1">
             {d}
           </div>
@@ -63,14 +63,19 @@ export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSi
           const fechaStr = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
           const tipoTurno = turnosAsignados[fechaStr] ?? null
           const esHoy = fechaStr === hoy.toISOString().split('T')[0]
-          const estilo = tipoTurno ? estilosDia[tipoTurno] : 'bg-marca-surface2 text-marca-muted2'
+          const tieneTurno = tipoTurno !== null
+          const estilo = tieneTurno
+            ? estilosDia[tipoTurno]
+            : 'bg-marca-surface2 text-marca-muted2'
 
           return (
             <div
               key={dia}
+              onClick={() => tieneTurno && onSeleccionarDia(fechaStr)}
               className={`aspect-square rounded-md flex items-center justify-center
-                          text-xs font-medium transition-all ${estilo}
-                          ${esHoy ? 'outline outline-2 outline-marca-mid' : ''}`}
+                  text-xs font-medium transition-all ${estilo}
+                  ${esHoy ? 'outline outline-2 outline-marca-mid' : ''}
+                  ${tieneTurno ? 'cursor-pointer hover:opacity-90' : 'cursor-default opacity-60'}`}
             >
               {dia}
             </div>
@@ -82,11 +87,11 @@ export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSi
       {/* Leyenda */}
       <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-marca-border">
         {[
-          { cod: 'TM', label: 'Mañana',   color: 'bg-blue-600'   },
-          { cod: 'TT', label: 'Tarde',    color: 'bg-amber-600'  },
-          { cod: 'TN', label: 'Noche',    color: 'bg-purple-600' },
-          { cod: 'FR', label: 'Franco',   color: 'bg-marca-muted'},
-          { cod: 'LM', label: 'Lic. Mat', color: 'bg-pink-600'   },
+          { cod: 'TM', label: 'Mañana', color: 'bg-blue-600' },
+          { cod: 'TT', label: 'Tarde', color: 'bg-amber-600' },
+          { cod: 'TN', label: 'Noche', color: 'bg-purple-600' },
+          { cod: 'FR', label: 'Franco', color: 'bg-marca-muted' },
+          { cod: 'LM', label: 'Lic. Mat', color: 'bg-pink-600' },
           { cod: 'LI', label: 'Licencia', color: 'bg-yellow-600' },
         ].map(item => (
           <div key={item.cod} className="flex items-center gap-1.5">

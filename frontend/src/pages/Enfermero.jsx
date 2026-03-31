@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { HeaderEnfermero } from '../components/enfermero/HeaderEnfermero'
 import { VistaSemanal } from '../components/enfermero/VistaSemanal'
 import { CalendarioMensual } from '../components/enfermero/CalendarioMensual'
+import { ModalTurno } from '../components/enfermero/ModalTurno'
 
 // Datos fake hasta conectar Supabase
 const turnosFake = {
@@ -23,6 +24,7 @@ export default function Enfermero() {
   const { session, cerrarSesion } = useAuth()
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [mesOffset, setMesOffset] = useState(0)
+  const [diaSeleccionado, setDiaSeleccionado] = useState(null)
 
   // TODO: reemplazar por query a Supabase
   // const { data } = await supabase
@@ -35,26 +37,32 @@ export default function Enfermero() {
 
   return (
     <div className="min-h-screen bg-marca-bg p-4 md:p-8 scrollbar-marca">
-      
-        <HeaderEnfermero
-          nombre={nombre}
-          onCerrarSesion={cerrarSesion}
-        />
-      
-        <VistaSemanal
-          turnosAsignados={turnosAsignados}
-          semanaOffset={semanaOffset}
-          onAnterior={() => setSemanaOffset(s => s - 1)}
-          onSiguiente={() => setSemanaOffset(s => s + 1)}
-        />
+
+      <HeaderEnfermero
+        nombre={nombre}
+        onCerrarSesion={cerrarSesion}
+      />
+
+      <VistaSemanal
+        turnosAsignados={turnosAsignados}
+        semanaOffset={semanaOffset}
+        onAnterior={() => setSemanaOffset(s => s - 1)}
+        onSiguiente={() => setSemanaOffset(s => s + 1)}
+        onSeleccionarDia={setDiaSeleccionado}
+      />
       <div className="max-w-2xl mx-auto">
         <CalendarioMensual
           turnosAsignados={turnosAsignados}
           mesOffset={mesOffset}
           onAnterior={() => setMesOffset(m => m - 1)}
           onSiguiente={() => setMesOffset(m => m + 1)}
+          onSeleccionarDia={setDiaSeleccionado}
         />
       </div>
+      <ModalTurno
+        fecha={diaSeleccionado}
+        onCerrar={() => setDiaSeleccionado(null)}
+      />
     </div>
   )
 }

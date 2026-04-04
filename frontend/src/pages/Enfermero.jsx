@@ -8,16 +8,16 @@ import { ModalTurno } from '../components/enfermero/ModalTurno'
 
 // Datos fake hasta conectar Supabase
 const turnosFake = {
-  '2026-03-17': 'TM',
-  '2026-03-18': 'TM',
-  '2026-03-19': 'FR',
-  '2026-03-20': 'TT',
-  '2026-03-21': 'TT',
-  '2026-03-22': 'TN',
-  '2026-03-23': 'TN',
-  '2026-03-24': 'TM',
-  '2026-03-25': 'FR',
-  '2026-03-26': 'TM',
+  '2026-03-17': ['TM'],
+  '2026-03-18': ['TM'],
+  '2026-03-19': ['FR'],
+  '2026-03-20': ['TT', 'TN'], // Ejemplo con 2 turnos el mismo día
+  '2026-03-21': ['TT'],
+  '2026-03-22': ['TN'],
+  '2026-03-23': ['TN'],
+  '2026-03-24': ['TM'],
+  '2026-03-25': ['FR'],
+  '2026-03-26': ['TM'],
 }
 
 export default function Enfermero() {

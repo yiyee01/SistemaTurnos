@@ -1,3 +1,5 @@
+import { motion, AnimatePresence } from 'framer-motion'
+
 const nombresTurno = {
     TM: 'Mañana (06-14)',
     TT: 'Tarde (14-22)',
@@ -24,7 +26,6 @@ const turnosFake = [
 ]
 
 export function ModalTurno({ fecha, onCerrar }) {
-    if (!fecha) return null
 
     const fechaDate = new Date(fecha + 'T12:00:00')
     const etiqueta = fechaDate.toLocaleDateString('es-AR', {
@@ -40,18 +41,26 @@ export function ModalTurno({ fecha, onCerrar }) {
     const turnos = turnosFake
 
     return (
-        // Fondo oscuro
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
-            onClick={onCerrar}
-        >
-            {/* Card del modal */}
-            <div
-                className="w-full max-w-sm bg-marca-surface border border-marca-border
-                   rounded-2xl p-5 flex flex-col gap-4"
-                onClick={e => e.stopPropagation()}
-            >
+        <AnimatePresence>
+            {fecha && (
+                // Fondo oscuro
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ background: 'rgba(0,0,0,0.6)' }}
+                    onClick={onCerrar}
+                >
+                    {/* Card del modal */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="w-full max-w-sm bg-marca-surface border border-marca-border
+                           rounded-2xl p-5 flex flex-col gap-4"
+                        onClick={e => e.stopPropagation()}
+                    >
 
                 {/* Header */}
                 <div className="flex justify-between items-start">
@@ -102,7 +111,9 @@ export function ModalTurno({ fecha, onCerrar }) {
                     Cerrar
                 </button>
 
-            </div>
-        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     )
 }

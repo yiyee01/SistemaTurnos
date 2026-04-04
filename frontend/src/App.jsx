@@ -1,12 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { PageWrapper } from './components/PageWrapper'
 import { useAuth } from './hooks/useAuth'
 import Login from './pages/Login'
 import Jefe from './pages/Jefe'
 import Enfermero from './pages/Enfermero'
+import MiEquipo from './pages/MiEquipo'
+import FormularioEnfermero from './pages/FormularioEnfermero'
+import HistorialPlanillas from './pages/HistorialPlanillas'
 
 //Funcion que permite que se protega cada pagina como la de jefeEnfermero validando que sea
 //Un jefe el que esta en la pagina
-function RutaProtegida({children, rolRequerido}) {
+function RutaProtegida({ children, rolRequerido }) {
   const { session, rol, cargando } = useAuth()
   if (cargando) return <div>Cargando...</div>
   if (!session) return <Navigate to="/login" />
@@ -15,31 +21,67 @@ function RutaProtegida({children, rolRequerido}) {
   return children
 }
 
-export default function App() {
+function AnimatedRoutes() {
+  const location = useLocation()
+
   return (
-    <BrowserRouter>
-      <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         {/* Ruta publica */}
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
 
         {/* Ruta para Jefe de enfermeria */}
         <Route path="/jefe" element={
-          <RutaProtegida rolRequerido="jefe"> {/* Validamos que sea un jefe */}
-            <Jefe /> {/* se devuelve la pagina si es jefe */}
+          <RutaProtegida rolRequerido="jefe">
+            <PageWrapper><Jefe /></PageWrapper>
           </RutaProtegida>
-        }/>
+        } />
 
         {/* Ruta solo para enfermeros */}
         <Route path="/enfermero" element={
           <RutaProtegida rolRequerido="enfermero">
-            <Enfermero />
+            <PageWrapper><Enfermero /></PageWrapper>
           </RutaProtegida>
-        }/>
+        } />
+
+        <Route path="/jefe/equipo" element={
+          <RutaProtegida rolRequerido="jefe">
+            <PageWrapper><MiEquipo /></PageWrapper>
+          </RutaProtegida>
+        } />
+
+        <Route path="/jefe/equipo/nuevo" element={
+          <RutaProtegida rolRequerido="jefe">
+            <PageWrapper><FormularioEnfermero /></PageWrapper>
+          </RutaProtegida>
+        } />
+
+        <Route path="/jefe/equipo/editar/:id" element={
+          <RutaProtegida rolRequerido="jefe">
+            <PageWrapper><FormularioEnfermero /></PageWrapper>
+          </RutaProtegida>
+        } />
+
+        <Route path="/jefe/historial" element={
+          <RutaProtegida rolRequerido="jefe">
+            <PageWrapper><HistorialPlanillas /></PageWrapper>
+          </RutaProtegida>
+        } />
 
         {/* Cualquier URL desconocida va al login */}
         <Route path="*" element={<Navigate to="/login" />} />
-        
+
       </Routes>
-    </BrowserRouter>
+    </AnimatePresence>
+  )
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AnimatedRoutes />
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

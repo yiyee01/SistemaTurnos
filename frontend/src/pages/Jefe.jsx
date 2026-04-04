@@ -1,204 +1,259 @@
-// src/App.jsx
-import { useState } from 'react';
-import { supabase } from '../supabase/client'
-// IMPORTACIÓN CLAVE
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { TablaSemanal } from '../components/tabla_semanal';
+// src/pages/Jefe.jsx
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { DragDropContext } from '@hello-pangea/dnd'
+import { useAuth } from '../hooks/useAuth'
+import { TablaTurnos } from '../components/jefe/TablaTurnos'
+import { BancoFichas } from '../components/jefe/BancoFichas'
+import { HeaderJefe } from '../components/jefe/HeaderJefe'
+import { BottomSheet } from '../components/jefe/BottomSheet'
+import { ModalGuardar } from '../components/jefe/ModalGuardar'
+import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
 
-const generarDiasSemana = () => {
-  const hoy = new Date();
-  const diaSemana = hoy.getDay(); 
-  const diferencia = hoy.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
-  const lunes = new Date(hoy.setDate(diferencia));
-  const nombresDias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-  
-  return nombresDias.map((nombre, index) => {
-    const fecha = new Date(lunes);
-    fecha.setDate(lunes.getDate() + index);
-    return { id: fecha.toISOString().split('T')[0], nombre: nombre, numero: fecha.getDate() };
-  });
-};
+const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 
-/* Consultar si tambien hay que agregar licencia en tipos de turno, es decir que pueda faltar por
-licencia de maternidad por ejemplo. (SÍ, agregalo acá abajo como un turno más) */
-
-const tiposTurno = [
-  { id: 'TM', nombre: 'Mañana (06-14)', color: 'bg-blue-200 text-blue-900 border-blue-400' },
-  { id: 'TT', nombre: 'Tarde (14-22)', color: 'bg-orange-200 text-orange-900 border-orange-400' },
-  { id: 'TN', nombre: 'Noche (22-06)', color: 'bg-purple-200 text-purple-900 border-purple-400' },
-  { id: 'FR', nombre: 'Franco', color: 'bg-gray-300 text-gray-700 border-gray-500' }
-];
-
-//Obtener de Supabase
 const enfermerosFake = [
   { id: 'e1', nombre: 'Juan Pérez' },
   { id: 'e2', nombre: 'Ana Gómez' },
-  { id: 'e3', nombre: 'Carlos López' }
-];
+  { id: 'e3', nombre: 'Carlos López' },
+]
 
-export default function App() {
-  const [enfermeros] = useState(enfermerosFake);
-  const [semanaActual] = useState(generarDiasSemana());
+// Obtiene el lunes de la semana de una fecha dada
+const getLunes = (fecha) => {
+  const d = new Date(fecha)
+  const dia = d.getDay()
+  d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1))
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+// Genera los 7 días a partir de un lunes
+const generarSemana = (lunes) =>
+  Array.from({ length: 7 }, (_, i) => {
+    const fecha = new Date(lunes)
+    fecha.setDate(lunes.getDate() + i)
+    return {
+      id: fecha.toISOString().split('T')[0],
+      nombre: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][i],
+      numero: fecha.getDate()
+    }
+  })
+
+export default function Jefe() {
+  const navigate = useNavigate()
+  const { cerrarSesion } = useAuth()
+  const [enfermeros] = useState(enfermerosFake)
+  const [lunesBase, setLunesBase] = useState(() => getLunes(new Date()))
+  const semanaActual = generarSemana(lunesBase)
+  const [turnosAsignados, setTurnosAsignados] = useState({})
+  const [limiteHoras, setLimiteHoras] = useState(48)
+  const [modalGuardar, setModalGuardar] = useState(null)
+  const [exportando, setExportando] = useState(false)
   
-  // Memoria para guardar dónde cae cada ficha
-  const [turnosAsignados, setTurnosAsignados] = useState({});
+  // TODO: Obtener el sectorId del jefe desde la tabla 'trabaja_en' al cargar
+  const [sectorId, setSectorId] = useState(1)
 
-  // 1. FUNCIÓN PARA EL BORRADOR
-  const guardarBorrador = async () => {
-    console.log("Datos crudos para el borrador (JSON completo):", turnosAsignados);
-    alert("Progreso guardado localmente. Revisá la consola.");
-  };
+  // Navegar entre semanas
+  const cambiarSemana = (delta) => {
+    setLunesBase(prev => {
+      const nuevo = new Date(prev)
+      nuevo.setDate(prev.getDate() + delta * 7)
+      return nuevo
+    })
+  }
 
-  // 2. FUNCIÓN PARA PUBLICAR
-  const publicarSemana = async () => {
-    const turnosParaBD = [];
-    
-    Object.entries(turnosAsignados).forEach(([celdaId, turnos]) => {
-      const [enfermero_id, fecha] = celdaId.split('-'); // El hachazo
-      turnos.forEach(turno => {
-        turnosParaBD.push({
-          enfermero_id: enfermero_id,
-          fecha: fecha,
-          tipo_turno_id: turno.tipo_id
-        });
-      });
-    });
+  // Estado del bottom sheet
+  const [bottomSheet, setBottomSheet] = useState({
+    abierto: false,
+    celdaId: null,
+    turnosActuales: []
+  })
 
-    console.log("Bulk Insert listo para la tabla turnos_asignados:", turnosParaBD);
-    alert(`¡Semana publicada! Se enviarán ${turnosParaBD.length} turnos a la base de datos. Revisá la consola.`);
-  };
+  // ── Regla: calcular horas semanales de un enfermero ──
+  const calcularHoras = (enfermeroId) => {
+    return semanaActual.reduce((total, dia) => {
+      // Usamos | como separador para evitar problemas con UUIDs que tienen -
+      const celdaId = `${enfermeroId}|${dia.id}`
+      const turnos = turnosAsignados[celdaId] ?? []
+      return total + turnos.reduce((h, t) => h + (HORAS_TURNO[t.tipo_id] ?? 0), 0)
+    }, 0)
+  }
 
-  // 3. EL CEREBRO FÍSICO (Actualizado con Optimistic UI)
-  const alSoltarFicha = (resultado) => {
-    const { destination, draggableId } = resultado;
-    
-    // Si la soltaste fuera de la tabla o en el banco de fichas, cortamos
-    if (!destination || destination.droppableId === 'banco-fichas') return;
+  // ── Regla: celda bloqueada si el enfermero tiene turno de Licencia (LI/LM) ──
+  const estaBloqueada = (enfermeroId, fechaId) => {
+    const celdaId = `${enfermeroId}|${fechaId}`
+    const turnos = turnosAsignados[celdaId] ?? []
+    return turnos.some(t => t.tipo_id === 'LI' || t.tipo_id === 'LM')
+  }
 
-    const celdaId = destination.droppableId; // Ej: "e2-2026-03-17"
-    const infoTurno = tiposTurno.find(t => t.id === draggableId);
-    
-    // Generamos un ID único para la ficha clonada (necesario para React)
-    const turnoNuevo = {
-      id_unico: crypto.randomUUID(),
-      tipo_id: infoTurno.id,
-      nombre: infoTurno.nombre,
-      color: infoTurno.color
-    };
+  // ── Drag and drop (desktop) ──
+  const alSoltarFicha = ({ destination, draggableId }) => {
+    if (!destination || destination.droppableId === 'banco-fichas') return
+    const celdaId = destination.droppableId
+    const [enfermeroId, fechaId] = celdaId.split('|')
+    if (estaBloqueada(enfermeroId, fechaId)) return
 
-    // Actualizamos el diccionario sumando el turno a la celda elegida
-    setTurnosAsignados(estadoAnterior => {
-      const turnosEnCelda = estadoAnterior[celdaId] || [];
-      return {
-        ...estadoAnterior,
-        [celdaId]: [...turnosEnCelda, turnoNuevo]
-      };
-    });
-  };
+    const tiposTurno = [
+      { id: 'TM', nombre: 'Mañana (06-14)', color: 'bg-blue-200 text-blue-900 border-blue-400' },
+      { id: 'TT', nombre: 'Tarde (14-22)', color: 'bg-orange-200 text-orange-900 border-orange-400' },
+      { id: 'TN', nombre: 'Noche (22-06)', color: 'bg-purple-200 text-purple-900 border-purple-400' },
+      { id: 'FR', nombre: 'Franco', color: 'bg-gray-300 text-gray-700 border-gray-500' },
+      { id: 'LM', nombre: 'Lic. Maternidad', color: 'bg-pink-200 text-pink-900 border-pink-400' },
+      { id: 'LI', nombre: 'Licencia', color: 'bg-yellow-200 text-yellow-900 border-yellow-400' },
+    ]
 
-  // NUEVA FUNCIÓN: El exterminador de turnos
-  const eliminarTurno = (celdaId, idUnicoTurno) => {
-    setTurnosAsignados(estadoAnterior => {
-      // 1. Obtenemos la lista actual de esa celda
-      const turnosActuales = estadoAnterior[celdaId] || [];
-      
-      // 2. Filtramos la lista, sacando el turno que coincide con el ID que queremos matar
-      // (Por eso es VITAL el crypto.randomUUID() que pusimos antes)
-      const turnosActualizados = turnosActuales.filter(turno => turno.id_unico !== idUnicoTurno);
-      
-      // 3. Devolvemos el estado nuevo
-      return {
-        ...estadoAnterior,
-        [celdaId]: turnosActualizados
-      };
-    });
-  };
+    const infoTurno = tiposTurno.find(t => t.id === draggableId)
+    if (!infoTurno) return
+
+    setTurnosAsignados(prev => ({
+      ...prev,
+      [celdaId]: [...(prev[celdaId] ?? []), {
+        id_unico: crypto.randomUUID(),
+        tipo_id: infoTurno.id,
+        nombre: infoTurno.nombre,
+        color: infoTurno.color,
+      }]
+    }))
+  }
+
+  // ── Eliminar turno ──
+  const eliminarTurno = (celdaId, idUnico) => {
+    setTurnosAsignados(prev => ({
+      ...prev,
+      [celdaId]: (prev[celdaId] ?? []).filter(t => t.id_unico !== idUnico)
+    }))
+  }
+
+  // ── Bottom sheet (móvil) ──
+  const abrirBottomSheet = (celdaId, turnosActuales) => {
+    setBottomSheet({ abierto: true, celdaId, turnosActuales })
+  }
+
+  const asignarDesdeMobile = (celdaId, opcion) => {
+    const [enfermeroId, fechaId] = celdaId.split('|')
+    if (estaBloqueada(enfermeroId, fechaId)) return
+    setTurnosAsignados(prev => ({
+      ...prev,
+      [celdaId]: [...(prev[celdaId] ?? []), {
+        id_unico: crypto.randomUUID(),
+        tipo_id: opcion.id,
+        nombre: opcion.nombre,
+        color: opcion.color,
+      }]
+    }))
+  }
+
+  // ── Abrir modales ──
+  const guardarBorrador = () => setModalGuardar('borrador')
+  const publicarSemana  = () => setModalGuardar('planificacion')
+
+  // ── Ejecutar el guardado real (llamado por el modal al confirmar) ──
+  async function ejecutarGuardado() {
+    // 1. Preparamos el payload exacto para la Edge Function
+    const estado_json = {
+      turnos: turnosAsignados,
+      limiteHoras
+    }
+
+    const payload = {
+      mes: lunesBase.getMonth() + 1, // o el mes que corresponda según lógica
+      anio: lunesBase.getFullYear(),
+      modo: modalGuardar, // 'borrador' | 'planificacion'
+      id_sector: sectorId,
+      estado_json,
+    }
+
+    // TODO: reemplazar por: await supabase.functions.invoke('guardar-planificacion', { body: payload })
+    console.log('Enviando a Edge Function:', payload)
+    return { ok: true }
+  }
+
+  async function handleExportarPDF() {
+    setExportando(true)
+    try {
+      exportarPlanillaPDF({
+        enfermeros,
+        semana: semanaActual,
+        turnosAsignados,
+        limiteHoras,
+      })
+    } finally {
+      setExportando(false)
+    }
+  }
 
   return (
-    // EL PARAGUAS GLOBAL
     <DragDropContext onDragEnd={alSoltarFicha}>
-      <div className="min-h-screen bg-slate-100 p-8 font-sans">
-        
-        {/* CABECERA NUEVA CON LOS BOTONES */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-black text-slate-800">Planilla Semanal de Turnos</h1>
-          <div className="flex gap-4">
-            <button 
-              onClick={guardarBorrador}
-              className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded shadow hover:bg-slate-300 transition-colors"
-            >
-              Guardar Borrador
-            </button>
-            <button 
-              onClick={publicarSemana}
-              className="px-4 py-2 bg-blue-600 text-white font-bold rounded shadow hover:bg-blue-700 transition-colors"
-            >
-              Publicar Semana
-            </button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-marca-bg p-4 pt-[105px] lg:p-8 lg:pt-[72px]">
 
-        <div className="mb-8 p-4 bg-white rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
-            Arrastrar Fichas de Turno
-          </h2>
-          
-          <Droppable 
-            droppableId="banco-fichas" 
-            direction="horizontal" 
-            isDropDisabled={true}
-            // MAGIA NEGRA PARA FICHAS INFINITAS:
-            renderClone={(provided, snapshot, rubric) => {
-              // rubric.source.index nos dice qué ficha agarró del arreglo
-              const turno = tiposTurno[rubric.source.index];
-              return (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.draggableProps}
-                  {...provided.dragHandleProps}
-                  // El clon se agranda un poco para que sepas que lo tenés agarrado
-                  className={`px-4 py-2 rounded-md border font-bold text-sm shadow-xl scale-110 z-50 ${turno.color}`}
-                >
-                  {turno.nombre}
-                </div>
-              );
-            }}
-          >
-            {(provided) => (
-              <div 
-                ref={provided.innerRef} 
-                {...provided.droppableProps} 
-                className="flex gap-4 min-h-[50px]"
-              >
-                {tiposTurno.map((turno, index) => (
-                  <Draggable key={turno.id} draggableId={turno.id} index={index}>
-                    {(provided, snapshot) => (
-                      // LA FICHA ORIGINAL QUE SE QUEDA CLAVADA EN EL BANCO
-                      <div 
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        // Truco visual: Si estás arrastrando una copia, atenuamos la original
-                        className={`px-4 py-2 rounded-md border font-bold text-sm shadow-sm transition-opacity ${turno.color} ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'}`}
-                      >
-                        {turno.nombre}
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </div>
-
-        <TablaSemanal 
-        enfermeros={enfermeros} 
-        diasSemana={semanaActual} 
-        turnosAsignados={turnosAsignados} 
-        onEliminarTurno={eliminarTurno}
+        <HeaderJefe
+          semana={semanaActual}
+          limiteHoras={limiteHoras}
+          onCambiarLimite={setLimiteHoras}
+          onGuardar={guardarBorrador}
+          onPublicar={publicarSemana}
+          onCerrarSesion={cerrarSesion}
+          onSemanaAnterior={() => cambiarSemana(-1)}
+          onSemanaSiguiente={() => cambiarSemana(1)}
+          onMiEquipo={() => navigate('/jefe/equipo')}
+          onHistorial={() => navigate('/jefe/historial')}
         />
+
+        <BancoFichas />
+
+        <TablaTurnos
+          enfermeros={enfermeros}
+          diasSemana={semanaActual}
+          turnosAsignados={turnosAsignados}
+          limiteHoras={limiteHoras}
+          calcularHoras={calcularHoras}
+          estaBloqueada={estaBloqueada}
+          onEliminarTurno={eliminarTurno}
+          onAbrirBottomSheet={abrirBottomSheet}
+        />
+
+        <BottomSheet
+          celdaId={bottomSheet.celdaId}
+          turnosActuales={bottomSheet.turnosActuales}
+          onAsignar={asignarDesdeMobile}
+          onEliminar={eliminarTurno}
+          onCerrar={() => setBottomSheet({ abierto: false, celdaId: null, turnosActuales: [] })}
+        />
+
+        <ModalGuardar
+          modo={modalGuardar}
+          abierto={Boolean(modalGuardar)}
+          onConfirmar={ejecutarGuardado}
+          onCancelar={() => setModalGuardar(null)}
+          onCerrar={() => setModalGuardar(null)}
+          onExportarPDF={handleExportarPDF}
+        />
+
+        {exportando && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.65)' }}
+          >
+            <div className="w-full max-w-xs bg-marca-surface border border-marca-border
+                            rounded-2xl p-6 flex flex-col items-center gap-4">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center
+                              bg-emerald-950 border border-emerald-700 text-emerald-400">
+                <svg className="animate-spin" width="26" height="26" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+                    strokeOpacity="0.25" />
+                  <path d="M12 2v4" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-base font-medium text-marca-pale">Exportando…</p>
+                <p className="text-sm text-marca-muted mt-1">Generando el archivo PDF</p>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </DragDropContext>
-  );
+  )
 }

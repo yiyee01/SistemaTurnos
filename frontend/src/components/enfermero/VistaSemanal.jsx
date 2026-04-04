@@ -40,10 +40,7 @@ export function VistaSemanal({ turnosAsignados, semanaOffset, onAnterior, onSigu
     <div>
 
       {/* Título + navegador */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-medium uppercase tracking-widest text-marca-light">
-          Semana actual
-        </p>
+      <div className="flex justify-center mb-5">
         <NavegadorSemana
           onAnterior={onAnterior}
           onSiguiente={onSiguiente}
@@ -58,14 +55,14 @@ export function VistaSemanal({ turnosAsignados, semanaOffset, onAnterior, onSigu
           const esHoy = fecha.getTime() === hoy.getTime()
 
           // turnosAsignados es un objeto { '2026-03-18': 'TM', '2026-03-19': 'TT', ... }
-          const tipoTurno = turnosAsignados[fechaStr] ?? null
+          const turnos = turnosAsignados[fechaStr] ?? []
 
           return (
             <div key={i} className="min-w-[120px] md:min-w-0">
               <TarjetaDia
                 nombreDia={DIAS[fecha.getDay()]}
                 numeroDia={fecha.getDate()}
-                tipoTurno={tipoTurno}
+                turnos={turnos}
                 esHoy={esHoy}
                 fechaStr={fechaStr}
                 onSeleccionarDia={onSeleccionarDia}

@@ -1,5 +1,7 @@
 // HeaderEnfermero.jsx
 import { useTheme } from '../../hooks/useTheme'
+import { IconSol } from '../icons/IconSol'
+import { IconLuna } from '../icons/IconLuna'
 
 export function HeaderEnfermero({ nombre, onCerrarSesion }) {
   const { dark, toggleTema } = useTheme()
@@ -23,7 +25,7 @@ export function HeaderEnfermero({ nombre, onCerrarSesion }) {
                      hover:border-marca-base transition-colors"
           title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
         >
-          {dark ? '☀️' : '🌙'}
+          {dark ? <IconSol /> : <IconLuna />}
         </button>
 
         <button

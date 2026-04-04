@@ -60,4 +60,32 @@
     .scrollbar-marca::-webkit-scrollbar-thumb:hover {
         background: #639922;
     }
+
+    .animate-slide-up {
+        animation: slideUp 0.25s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+        }
+
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    .animate-slide-left {
+        animation: slideLeft 0.22s ease-out;
+    }
+
+    @keyframes slideLeft {
+        from {
+            transform: translateX(-100%);
+        }
+
+        to {
+            transform: translateX(0);
+        }
+    }
 }

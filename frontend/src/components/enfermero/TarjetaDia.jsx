@@ -19,10 +19,8 @@ const nombresTurno = {
   LI: 'Licencia',
 }
 
-export function TarjetaDia({ nombreDia, numeroDia, tipoTurno, esHoy, onSeleccionarDia, fechaStr }) {
-  const estilos = estilosTurno[tipoTurno] ?? 'bg-marca-surface2 text-marca-muted border-t-2 border-marca-border2'
-  const nombre = nombresTurno[tipoTurno] ?? 'Sin turno'
-  const tieneTurno = tipoTurno !== null
+export function TarjetaDia({ nombreDia, numeroDia, turnos = [], esHoy, onSeleccionarDia, fechaStr }) {
+  const tieneTurno = turnos.length > 0
 
   return (
     <div
@@ -41,8 +39,22 @@ export function TarjetaDia({ nombreDia, numeroDia, tipoTurno, esHoy, onSeleccion
         </p>
       </div>
 
-      <div className={`flex-1 flex items-center justify-center p-4 text-xs font-medium text-center ${estilos}`}>
-        {nombre}
+      <div className="flex-1 flex flex-col bg-marca-surface2 border-t border-marca-border2 overflow-hidden">
+        {tieneTurno ? (
+          turnos.map((t, idx) => {
+            const estilos = estilosTurno[t] ?? 'bg-marca-surface2 text-marca-muted border-t-2 border-marca-border2'
+            const nombre = nombresTurno[t] ?? 'Sin turno'
+            return (
+              <div key={idx} className={`flex-1 flex items-center justify-center p-2 text-xs font-medium text-center ${estilos} ${idx > 0 ? 'border-t-0 border-opacity-50' : ''}`}>
+                {nombre}
+              </div>
+            )
+          })
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-4 text-xs font-medium text-center text-marca-muted">
+            Sin turno
+          </div>
+        )}
       </div>
     </div>
   )

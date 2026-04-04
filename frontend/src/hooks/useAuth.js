@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../supabase/client"; 
 
 // MODO DESARROLLO
-const DEV_MODE = import.meta.env.DEV; // true en npm run dev, false en build
+const DEV_MODE = import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEV_AUTH === 'true'; // true en npm run dev, false en build
 const DEV_ROL = "enfermero"; // cambiá acá para probar otros roles
 
 export function useAuth() {

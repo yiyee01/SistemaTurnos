@@ -15,7 +15,7 @@ export function NavegadorSemana({ onAnterior, onSiguiente, etiqueta }) {
 
       {etiqueta && (
         <span className="text-xs text-marca-light min-w-28 text-center font-medium">
-          {etiqueta}
+          Semana del {etiqueta}
         </span>
       )}
 

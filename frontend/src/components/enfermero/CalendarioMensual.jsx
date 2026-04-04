@@ -4,14 +4,7 @@ import { NavegadorSemana } from './NavegadorSemana'
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-const estilosDia = {
-  TM: 'bg-blue-950 text-blue-300',
-  TT: 'bg-amber-950 text-amber-300',
-  TN: 'bg-purple-950 text-purple-300',
-  FR: 'bg-marca-surface2 text-marca-muted',
-  LM: 'bg-pink-950 text-pink-300',
-  LI: 'bg-yellow-950 text-yellow-300',
-}
+
 
 export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSiguiente, onSeleccionarDia }) {
   const hoy = new Date()
@@ -61,23 +54,26 @@ export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSi
         {/* Días del mes */}
         {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(dia => {
           const fechaStr = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
-          const tipoTurno = turnosAsignados[fechaStr] ?? null
+          const turnos = turnosAsignados[fechaStr] ?? []
           const esHoy = fechaStr === hoy.toISOString().split('T')[0]
-          const tieneTurno = tipoTurno !== null
+          const tieneTurno = turnos.length > 0
           const estilo = tieneTurno
-            ? estilosDia[tipoTurno]
-            : 'bg-marca-surface2 text-marca-muted2'
+            ? 'bg-marca-surface3 text-marca-pale shadow-sm border border-marca-border'
+            : 'bg-transparent text-marca-muted2 hover:bg-marca-surface2'
 
           return (
             <div
               key={dia}
               onClick={() => tieneTurno && onSeleccionarDia(fechaStr)}
-              className={`aspect-square rounded-md flex items-center justify-center
+              className={`relative aspect-square rounded-md flex items-center justify-center
                   text-xs font-medium transition-all ${estilo}
-                  ${esHoy ? 'outline outline-2 outline-marca-mid' : ''}
+                  ${esHoy ? 'outline-2 outline-marca-mid' : ''}
                   ${tieneTurno ? 'cursor-pointer hover:opacity-90' : 'cursor-default opacity-60'}`}
             >
               {dia}
+              {turnos.length > 1 && (
+                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-white rounded-full opacity-60"></div>
+              )}
             </div>
           )
         })}

@@ -14,7 +14,6 @@ export function useAuth() {
   const [rol, setRol] = useState<'jefe' | 'enfermero' | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
 
-
   useEffect(() => {
     // 1. Sesión que ya existe (guardada en localStorage por Supabase)
     supabase.auth.getSession().then(({ data: { session } }) => {

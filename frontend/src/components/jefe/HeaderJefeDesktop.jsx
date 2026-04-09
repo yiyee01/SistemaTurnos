@@ -103,7 +103,7 @@ export function HeaderJefeDesktop({
                 {/* Izquierda: logo + título */}
                 <div className="flex items-center gap-3 shrink-0">
                     <div className="w-7 h-7 rounded-lg bg-marca-border flex items-center justify-center">
-                        <CalendarClock size={16} />
+                        <CalendarClock className='text-marca-base' size={16} />
                     </div>
                     <span className="text-sm font-semibold text-marca-pale">
                         Planilla semanal

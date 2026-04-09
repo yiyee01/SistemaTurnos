@@ -5,33 +5,18 @@ import { HeaderEnfermero } from '../components/enfermero/HeaderEnfermero'
 import { VistaSemanal } from '../components/enfermero/VistaSemanal'
 import { CalendarioMensual } from '../components/enfermero/CalendarioMensual'
 import { ModalTurno } from '../components/enfermero/ModalTurno'
-
-// Datos fake hasta conectar Supabase
-const turnosFake = {
-  '2026-03-17': ['TM'],
-  '2026-03-18': ['TM'],
-  '2026-03-19': ['FR'],
-  '2026-03-20': ['TT', 'TN'], // Ejemplo con 2 turnos el mismo día
-  '2026-03-21': ['TT'],
-  '2026-03-22': ['TN'],
-  '2026-03-23': ['TN'],
-  '2026-03-24': ['TM'],
-  '2026-03-25': ['FR'],
-  '2026-03-26': ['TM'],
-}
+import { supabase } from '../supabase/client'
+import { useTurnos } from '../hooks/useTurnos'
 
 export default function Enfermero() {
   const { session, cerrarSesion } = useAuth()
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [mesOffset, setMesOffset] = useState(0)
   const [diaSeleccionado, setDiaSeleccionado] = useState(null)
+  const { turnos } = useTurnos(session?.user?.id, 1, 1)
 
-  // TODO: reemplazar por query a Supabase
-  // const { data } = await supabase
-  //   .from('turnos_asignados')
-  //   .select('fecha, tipo_turno_id')
-  //   .eq('enfermero_id', session.user.id)
-  const turnosAsignados = turnosFake
+  //Hay que permitir al enfermero cambiar entre hospitales y sectores
+  // y eso mandar a useTurnos
 
   const nombre = session?.user?.email ?? 'Enfermero'
 
@@ -51,9 +36,9 @@ export default function Enfermero() {
         onSeleccionarDia={setDiaSeleccionado}
       /> */}
 
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <CalendarioMensual
-          turnosAsignados={turnosAsignados}
+          turnosAsignados={turnos}
           mesOffset={mesOffset}
           onAnterior={() => setMesOffset(m => m - 1)}
           onSiguiente={() => setMesOffset(m => m + 1)}

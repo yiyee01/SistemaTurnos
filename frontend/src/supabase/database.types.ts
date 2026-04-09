@@ -239,22 +239,28 @@ export type Database = {
         Row: {
           enfermero_id: string
           fecha: string
+          hospital_id: number | null
           id: number
           jefe_enf_id: string
+          sector_id: number | null
           tipo_turno_id: number
         }
         Insert: {
           enfermero_id: string
           fecha: string
+          hospital_id?: number | null
           id?: number
           jefe_enf_id: string
+          sector_id?: number | null
           tipo_turno_id: number
         }
         Update: {
           enfermero_id?: string
           fecha?: string
+          hospital_id?: number | null
           id?: number
           jefe_enf_id?: string
+          sector_id?: number | null
           tipo_turno_id?: number
         }
         Relationships: [
@@ -279,6 +285,20 @@ export type Database = {
             referencedRelation: "tipos_turno"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "turnos_asignados_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_asignados_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectores"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -286,7 +306,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      guardar_borrador: {
+        Args: {
+          p_anio: number
+          p_estado_json: Json
+          p_mes: number
+          p_sector_id: number
+        }
+        Returns: undefined
+      }
+      mi_rol: { Args: never; Returns: string }
+      publicar_planilla: {
+        Args: {
+          p_anio: number
+          p_mes: number
+          p_sector_id: number
+          p_turnos: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

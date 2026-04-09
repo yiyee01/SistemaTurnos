@@ -4,8 +4,6 @@ import { NavegadorSemana } from './NavegadorSemana'
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-
-
 export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSiguiente, onSeleccionarDia }) {
   const hoy = new Date()
   const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + mesOffset, 1)
@@ -54,7 +52,7 @@ export function CalendarioMensual({ turnosAsignados, mesOffset, onAnterior, onSi
         {/* Días del mes */}
         {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(dia => {
           const fechaStr = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
-          const turnos = turnosAsignados[fechaStr] ?? []
+          const turnos = turnosAsignados.filter(t => t.fecha === fechaStr)
           const esHoy = fechaStr === hoy.toISOString().split('T')[0]
           const tieneTurno = turnos.length > 0
           const estilo = tieneTurno

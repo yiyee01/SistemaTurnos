@@ -14,10 +14,9 @@ import { Loader2 } from 'lucide-react'
 
 const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 
-// == REGLAS DE NEGOCIO (Modificables desde el archivo .env) ==
+// == REGLAS DE NEGOCIO ==
 const MAX_NOCHES_CONSECUTIVAS = Number(import.meta.env.VITE_MAX_NOCHES_CONSECUTIVAS || 3);
 const MIN_FRANCOS_SEMANA = Number(import.meta.env.VITE_MIN_FRANCOS_SEMANA || 1);
-// =====================================================
 
 // Obtiene el lunes de la semana de una fecha dada
 const getLunes = (fecha) => {

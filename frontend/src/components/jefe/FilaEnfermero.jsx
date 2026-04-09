@@ -8,6 +8,7 @@ export function FilaEnfermero({
     horasSemanales,
     limiteHoras,
     estaBloqueada,
+    cumpleFrancos,
     onEliminarTurno,
     onAbrirBottomSheet,
 }) {
@@ -21,9 +22,18 @@ export function FilaEnfermero({
                       border-r border-marca-border
                       sticky left-0 bg-marca-bg z-10
                       hover:bg-marca-surface2 transition-colors">
-                <p className="text-sm font-medium text-marca-pale truncate">
-                    {enfermero.nombre}
-                </p>
+                <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-marca-pale truncate">
+                        {enfermero.nombre}
+                    </p>
+                    {!cumpleFrancos && (
+                        <span title="Faltan francos obligatorios" 
+                              className="text-xs bg-red-950/80 text-red-400 border border-red-800 w-4 h-4 
+                                         rounded-full flex items-center justify-center shrink-0 cursor-help">
+                            !
+                        </span>
+                    )}
+                </div>
                 {superaLimite ? (
                     <span className="text-xs text-amber-400 font-medium mt-0.5">
                         ⚠ {horasSemanales}h

@@ -1,22 +1,23 @@
-// src/pages/Jefe.jsx
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { DragDropContext } from '@hello-pangea/dnd'
 import { useAuth } from '../hooks/useAuth'
+import { useEquipo } from '../hooks/useEquipo' //uso la misma funcion que para equipo, si me traigo todo el equipo a cargo de un jefe
 import { TablaTurnos } from '../components/jefe/TablaTurnos'
 import { BancoFichas } from '../components/jefe/BancoFichas'
 import { HeaderJefe } from '../components/jefe/HeaderJefe'
 import { BottomSheet } from '../components/jefe/BottomSheet'
 import { ModalGuardar } from '../components/jefe/ModalGuardar'
 import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
+import { Loader2 } from 'lucide-react'
 
 const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 
-const enfermerosFake = [
-  { id: 'e1', nombre: 'Juan Pérez' },
-  { id: 'e2', nombre: 'Ana Gómez' },
-  { id: 'e3', nombre: 'Carlos López' },
-]
+// == REGLAS DE NEGOCIO (Modificables desde el archivo .env) ==
+const MAX_NOCHES_CONSECUTIVAS = Number(import.meta.env.VITE_MAX_NOCHES_CONSECUTIVAS || 3);
+const MIN_FRANCOS_SEMANA = Number(import.meta.env.VITE_MIN_FRANCOS_SEMANA || 1);
+// =====================================================
 
 // Obtiene el lunes de la semana de una fecha dada
 const getLunes = (fecha) => {
@@ -41,17 +42,31 @@ const generarSemana = (lunes) =>
 
 export default function Jefe() {
   const navigate = useNavigate()
-  const { cerrarSesion } = useAuth()
-  const [enfermeros] = useState(enfermerosFake)
+  const { session, cerrarSesion } = useAuth()
+
+  // Usamos useEquipo que ya carga todo: enfermeros, sus lugares de trabajo, hospitales y sectores
+  const { enfermeros, hospitales, sectores, cargando } = useEquipo(session?.user?.id)
+
   const [lunesBase, setLunesBase] = useState(() => getLunes(new Date()))
   const semanaActual = generarSemana(lunesBase)
   const [turnosAsignados, setTurnosAsignados] = useState({})
   const [limiteHoras, setLimiteHoras] = useState(48)
   const [modalGuardar, setModalGuardar] = useState(null)
   const [exportando, setExportando] = useState(false)
-  
-  // TODO: Obtener el sectorId del jefe desde la tabla 'trabaja_en' al cargar
+
+  // TODO: Obtener el sectorId del jefe desde la tabla 'trabaja_en' o enfermeros al cargar
   const [sectorId, setSectorId] = useState(1)
+
+  const [filtroHospital, setFiltroHospital] = useState('')
+  const [filtroSector, setFiltroSector] = useState('')
+
+  // Filtramos la lista de enfermeros a planificar según las selecciones
+  const enfermerosAplanificar = enfermeros.filter(e => {
+    const hId = e.trabaja_en?.[0]?.hospitales?.id?.toString() ?? ''
+    const sId = e.trabaja_en?.[0]?.sectores?.id?.toString() ?? ''
+    return (filtroHospital === '' || hId === filtroHospital) &&
+      (filtroSector === '' || sId === filtroSector)
+  })
 
   // Navegar entre semanas
   const cambiarSemana = (delta) => {
@@ -60,6 +75,13 @@ export default function Jefe() {
       nuevo.setDate(prev.getDate() + delta * 7)
       return nuevo
     })
+  }
+
+  // Toast System
+  const [toast, setToast] = useState(null)
+  const mostrarToast = (mensaje) => {
+    setToast(mensaje)
+    setTimeout(() => setToast(null), 3000)
   }
 
   // Estado del bottom sheet
@@ -86,6 +108,66 @@ export default function Jefe() {
     return turnos.some(t => t.tipo_id === 'LI' || t.tipo_id === 'LM')
   }
 
+  // ── Regla: Validar asignación antes de soltar la ficha ──
+  const validarAsignacion = (enfermeroId, fechaId, turnoDestinoId) => {
+    const celdaId = `${enfermeroId}|${fechaId}`
+    const turnosHoy = turnosAsignados[celdaId] ?? []
+
+    // 1. Solapamiento estricto
+    if (turnosHoy.some(t => t.tipo_id === turnoDestinoId)) {
+      return "No puedes asignar exactamente el mismo turno el mismo día."
+    }
+
+    const idxDia = semanaActual.findIndex(d => d.id === fechaId)
+    if (idxDia === -1) return null
+
+    const turnosDelDia = (diaIndex) => {
+      if (diaIndex < 0 || diaIndex >= 7) return []
+      const dId = semanaActual[diaIndex].id
+      return turnosAsignados[`${enfermeroId}|${dId}`] ?? []
+    }
+
+    // 2. Descanso mínimo de 12 horas (Noche -> Mañana al día siguiente)
+    if (turnoDestinoId === 'TM' && turnosDelDia(idxDia - 1).some(t => t.tipo_id === 'TN')) {
+      return "Descanso insuficiente: tiene turno Noche el día anterior (12h de descanso obligatorias)."
+    }
+    if (turnoDestinoId === 'TN' && turnosDelDia(idxDia + 1).some(t => t.tipo_id === 'TM')) {
+      return "Descanso insuficiente: tiene turno Mañana al día siguiente (12h de descanso obligatorias)."
+    }
+
+    // 3. Tope de Noches (MAX_NOCHES_CONSECUTIVAS)
+    if (turnoDestinoId === 'TN') {
+      let consecutivas = 0;
+      let maxConsecutivas = 0;
+      for (let i = 0; i < 7; i++) {
+        let tieneNoche = turnosDelDia(i).some(t => t.tipo_id === 'TN');
+        if (i === idxDia) tieneNoche = true; // Simulamos la inserción
+
+        if (tieneNoche) {
+          consecutivas++;
+          if (consecutivas > maxConsecutivas) maxConsecutivas = consecutivas;
+        } else {
+          consecutivas = 0;
+        }
+      }
+      if (maxConsecutivas > MAX_NOCHES_CONSECUTIVAS) {
+        return `Tope clínico excedido: No se permiten más de ${MAX_NOCHES_CONSECUTIVAS} guardias nocturnas continuas.`;
+      }
+    }
+
+    return null; // OK
+  }
+
+  // ── Regla: Calcular si tiene el mínimo de francos ──
+  const cumpleMinimoFrancos = (enfermeroId) => {
+    const totalFrancos = semanaActual.reduce((total, dia) => {
+      const celdaId = `${enfermeroId}|${dia.id}`
+      const turnos = turnosAsignados[celdaId] ?? []
+      return total + turnos.filter(t => t.tipo_id === 'FR').length
+    }, 0)
+    return totalFrancos >= MIN_FRANCOS_SEMANA
+  }
+
   // ── Drag and drop (desktop) ──
   const alSoltarFicha = ({ destination, draggableId }) => {
     if (!destination || destination.droppableId === 'banco-fichas') return
@@ -104,6 +186,12 @@ export default function Jefe() {
 
     const infoTurno = tiposTurno.find(t => t.id === draggableId)
     if (!infoTurno) return
+
+    const errorReglas = validarAsignacion(enfermeroId, fechaId, infoTurno.id)
+    if (errorReglas) {
+      mostrarToast(errorReglas)
+      return
+    }
 
     setTurnosAsignados(prev => ({
       ...prev,
@@ -132,6 +220,13 @@ export default function Jefe() {
   const asignarDesdeMobile = (celdaId, opcion) => {
     const [enfermeroId, fechaId] = celdaId.split('|')
     if (estaBloqueada(enfermeroId, fechaId)) return
+
+    const errorReglas = validarAsignacion(enfermeroId, fechaId, opcion.id)
+    if (errorReglas) {
+      mostrarToast(errorReglas)
+      return
+    }
+
     setTurnosAsignados(prev => ({
       ...prev,
       [celdaId]: [...(prev[celdaId] ?? []), {
@@ -145,7 +240,7 @@ export default function Jefe() {
 
   // ── Abrir modales ──
   const guardarBorrador = () => setModalGuardar('borrador')
-  const publicarSemana  = () => setModalGuardar('planificacion')
+  const publicarSemana = () => setModalGuardar('planificacion')
 
   // ── Ejecutar el guardado real (llamado por el modal al confirmar) ──
   async function ejecutarGuardado() {
@@ -199,18 +294,52 @@ export default function Jefe() {
           onHistorial={() => navigate('/jefe/historial')}
         />
 
+        {/* Filtros de Planificación */}
+        <div className="flex gap-2 lg:gap-4 mb-4 mt-2">
+          <select
+            value={filtroHospital}
+            onChange={e => setFiltroHospital(e.target.value)}
+            className="w-full lg:w-48 px-3 py-2.5 rounded-xl text-sm font-medium bg-marca-surface
+                         border border-marca-border2 text-marca-muted
+                         outline-none cursor-pointer hover:border-marca-base transition-colors"
+          >
+            <option value="">Hospital</option>
+            {hospitales.map(h => (
+              <option key={h.id} value={h.id}>{h.nombre}</option>
+            ))}
+          </select>
+
+          <select
+            value={filtroSector}
+            onChange={e => setFiltroSector(e.target.value)}
+            className="w-full lg:w-48 px-3 py-2.5 rounded-xl text-sm font-medium bg-marca-surface
+                         border border-marca-border2 text-marca-muted
+                         outline-none cursor-pointer hover:border-marca-base transition-colors"
+          >
+            <option value="">Sector / Sala</option>
+            {sectores.map(s => (
+              <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+          </select>
+        </div>
+
         <BancoFichas />
 
-        <TablaTurnos
-          enfermeros={enfermeros}
-          diasSemana={semanaActual}
-          turnosAsignados={turnosAsignados}
-          limiteHoras={limiteHoras}
-          calcularHoras={calcularHoras}
-          estaBloqueada={estaBloqueada}
-          onEliminarTurno={eliminarTurno}
-          onAbrirBottomSheet={abrirBottomSheet}
-        />
+        {cargando ? (
+          <div className="py-10 text-center text-sm text-marca-muted">Cargando base de datos...</div>
+        ) : (
+          <TablaTurnos
+            enfermeros={enfermerosAplanificar}
+            diasSemana={semanaActual}
+            turnosAsignados={turnosAsignados}
+            limiteHoras={limiteHoras}
+            calcularHoras={calcularHoras}
+            estaBloqueada={estaBloqueada}
+            cumpleMinimoFrancos={cumpleMinimoFrancos}
+            onEliminarTurno={eliminarTurno}
+            onAbrirBottomSheet={abrirBottomSheet}
+          />
+        )}
 
         <BottomSheet
           celdaId={bottomSheet.celdaId}
@@ -238,12 +367,7 @@ export default function Jefe() {
                             rounded-2xl p-6 flex flex-col items-center gap-4">
               <div className="w-12 h-12 rounded-full flex items-center justify-center
                               bg-emerald-950 border border-emerald-700 text-emerald-400">
-                <svg className="animate-spin" width="26" height="26" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-                    strokeOpacity="0.25" />
-                  <path d="M12 2v4" />
-                </svg>
+                <Loader2 className="animate-spin" size={26} />
               </div>
               <div className="text-center">
                 <p className="text-base font-medium text-marca-pale">Exportando…</p>
@@ -252,6 +376,23 @@ export default function Jefe() {
             </div>
           </div>
         )}
+
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm
+                         bg-red-950/95 backdrop-blur-md border border-red-800 text-red-100
+                         px-4 py-3.5 rounded-2xl shadow-2xl text-sm font-medium
+                         flex items-center gap-3"
+            >
+              <div className="w-6 h-6 rounded-full bg-red-900 border border-red-700 flex items-center justify-center shrink-0">!</div>
+              <p className="flex-1 leading-snug">{toast}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </div>
     </DragDropContext>

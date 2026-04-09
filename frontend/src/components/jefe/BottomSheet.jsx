@@ -27,7 +27,7 @@ export function BottomSheet({ celdaId, turnosActuales, onAsignar, onEliminar, on
                     />
 
                     {/* Panel desde abajo */}
-                    <motion.div 
+                    <motion.div
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
@@ -37,51 +37,51 @@ export function BottomSheet({ celdaId, turnosActuales, onAsignar, onEliminar, on
                                    rounded-t-2xl p-5 flex flex-col gap-4"
                     >
 
-                {/* Handle */}
-                <div className="w-10 h-1 bg-marca-border2 rounded-full mx-auto" />
+                        {/* Handle */}
+                        <div className="w-10 h-1 bg-marca-border2 rounded-full mx-auto" />
 
-                {/* Título */}
-                <p className="text-xs uppercase tracking-widest text-marca-muted font-medium text-center">
-                    Asignar turno
-                </p>
+                        {/* Título */}
+                        <p className="text-xs uppercase tracking-widest text-marca-muted font-medium text-center">
+                            Asignar turno
+                        </p>
 
-                {/* Opciones de turno */}
-                <div className="grid grid-cols-3 gap-2">
-                    {opcionesTurno.map(op => (
-                        <button
-                            key={op.id}
-                            onClick={() => { onAsignar(celdaId, op); onCerrar() }}
-                            className={`py-3 px-2 rounded-xl border text-xs font-medium
+                        {/* Opciones de turno */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {opcionesTurno.map(op => (
+                                <button
+                                    key={op.id}
+                                    onClick={() => { onAsignar(celdaId, op); onCerrar() }}
+                                    className={`py-3 px-2 rounded-xl border text-xs font-medium
                           text-center transition-all active:scale-95 ${op.color}`}
-                        >
-                            {op.nombre}
-                        </button>
-                    ))}
-                </div>
+                                >
+                                    {op.nombre}
+                                </button>
+                            ))}
+                        </div>
 
-                {/* Botón borrar — solo si ya tiene turno */}
-                {tieneTurno && (
-                    <button
-                        onClick={() => {
-                            turnosActuales.forEach(t => onEliminar(celdaId, t.id_unico))
-                            onCerrar()
-                        }}
-                        className="w-full py-3 rounded-xl border border-red-800
+                        {/* Botón borrar — solo si ya tiene turno */}
+                        {tieneTurno && (
+                            <button
+                                onClick={() => {
+                                    turnosActuales.forEach(t => onEliminar(celdaId, t.id_unico))
+                                    onCerrar()
+                                }}
+                                className="w-full py-3 rounded-xl border border-red-800
                        bg-red-950 text-red-300 text-sm font-medium
                        transition-all active:scale-95"
-                    >
-                        Quitar turno
-                    </button>
-                )}
+                            >
+                                Quitar turno
+                            </button>
+                        )}
 
-                {/* Cancelar */}
-                <button
-                    onClick={onCerrar}
-                    className="w-full py-3 rounded-xl border border-marca-border2
+                        {/* Cancelar */}
+                        <button
+                            onClick={onCerrar}
+                            className="w-full py-3 rounded-xl border border-marca-border2
                      text-marca-muted text-sm transition-all active:scale-95"
-                >
-                    Cancelar
-                </button>
+                        >
+                            Cancelar
+                        </button>
 
                     </motion.div>
                 </>

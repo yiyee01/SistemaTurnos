@@ -1,11 +1,23 @@
 // src/pages/Login.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { VistaLogin } from '../components/VistaLogin'
 import { supabase } from '../supabase/client'
+import { useAuth } from '../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  const { rol } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (rol === 'jefe') {
+      navigate('/jefe')
+    } else if (rol === 'enfermero') {
+      navigate('/enfermero')
+    }
+  }, [rol, navigate])
 
   const handleLogin = async (email, password) => {
     setCargando(true)
@@ -15,11 +27,10 @@ export default function Login() {
 
     if (error) {
       setError('Email o contraseña incorrectos.')
+      setCargando(false)
     }
-    // Si el login es exitoso, useAuth detecta la sesión
-    // y App.jsx redirige automáticamente según el rol
-
-    setCargando(false)
+    // Si no hay error, el hook useAuth escuchará el cambio de sesión, 
+    // buscará el rol y el useEffect de arriba redirigirá automáticamente.
   }
 
   return (

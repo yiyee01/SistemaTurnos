@@ -1,26 +1,19 @@
 // src/hooks/useAuth.js
 import { useState, useEffect } from "react";
-import { supabase } from "../supabase/client"; 
+import { supabase } from "../supabase/client";
+import { Session } from "@supabase/supabase-js";
 
 // MODO DESARROLLO
 const DEV_MODE = import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEV_AUTH === 'true'; // true en npm run dev, false en build
-const DEV_ROL = "enfermero"; // cambiá acá para probar otros roles
+const DEV_ROL = "jefe"; // cambiá acá para probar otros roles
 
 export function useAuth() {
-  // Saltea todo Supabase mientras desarrollás
-  if (DEV_MODE) {
-    return {
-      session: { user: { email: "dev@test.com" } },
-      rol: DEV_ROL,
-      cargando: false,
-      cerrarSesion: () => console.log("DEV_MODE: cerrarSesion deshabilitado"),
-    };
-  }
 
   // ── PRODUCCIÓN: lógica real con Supabase ──────────────────────────
-  const [session, setSession] = useState(undefined);
-  const [rol, setRol] = useState(null);
-  const [cargando, setCargando] = useState(true);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [rol, setRol] = useState<'jefe' | 'enfermero' | null>(null);
+  const [cargando, setCargando] = useState<boolean>(true);
+
 
   useEffect(() => {
     // 1. Sesión que ya existe (guardada en localStorage por Supabase)
@@ -46,16 +39,19 @@ export function useAuth() {
   }, []);
 
   // Busca el rol en la tabla 'perfiles' de Supabase
-  async function cargarRol(userId) {
-    setCargando(true);
+  async function cargarRol(userId: string) {
     const { data, error } = await supabase
       .from("enfermeros")
       .select("rol")
       .eq("id", userId)
       .single();
 
-    if (error) console.error("Error cargando perfil:", error.message);
-    setRol(data?.rol ?? null);
+    if (error || !data) {
+      if (error) console.error("Error cargando perfil:", error.message);
+      setRol(null);
+    } else {
+      setRol((data as any).rol as 'jefe' | 'enfermero' | null);
+    }
     setCargando(false);
   }
 

@@ -8,6 +8,7 @@ export function TablaTurnos({
     limiteHoras,
     calcularHoras,
     estaBloqueada,
+    cumpleMinimoFrancos,
     onEliminarTurno,
     onAbrirBottomSheet,
 }) {
@@ -55,6 +56,7 @@ export function TablaTurnos({
                             horasSemanales={calcularHoras(enfermero.id)}
                             limiteHoras={limiteHoras}
                             estaBloqueada={estaBloqueada}
+                            cumpleFrancos={cumpleMinimoFrancos(enfermero.id)}
                             onEliminarTurno={onEliminarTurno}
                             onAbrirBottomSheet={onAbrirBottomSheet}
                         />

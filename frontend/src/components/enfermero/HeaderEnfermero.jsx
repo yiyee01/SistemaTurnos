@@ -1,7 +1,8 @@
 // HeaderEnfermero.jsx
 import { useTheme } from '../../hooks/useTheme'
-import { IconSol } from '../icons/IconSol'
-import { IconLuna } from '../icons/IconLuna'
+import { Sun } from 'lucide-react'
+import { Moon } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 
 export function HeaderEnfermero({ nombre, onCerrarSesion }) {
   const { dark, toggleTema } = useTheme()
@@ -25,7 +26,7 @@ export function HeaderEnfermero({ nombre, onCerrarSesion }) {
                      hover:border-marca-base transition-colors"
           title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
         >
-          {dark ? <IconSol /> : <IconLuna />}
+          {dark ? < Sun /> : < Moon />}
         </button>
 
         <button
@@ -34,7 +35,7 @@ export function HeaderEnfermero({ nombre, onCerrarSesion }) {
                      bg-marca-surface rounded-lg px-4 py-2
                      hover:text-marca-light hover:border-marca-base transition-colors"
         >
-          Cerrar sesión
+          <LogOut className='text-red-400' />
         </button>
       </div>
     </div>

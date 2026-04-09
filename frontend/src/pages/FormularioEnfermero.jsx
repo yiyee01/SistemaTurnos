@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase/client'
+import { ChevronLeft } from 'lucide-react'
 
 const campoVacio = {
   nombre: '',
@@ -167,10 +168,7 @@ export default function FormularioEnfermero() {
                      px-3 py-1.5 mb-6 hover:text-marca-light
                      hover:border-marca-base transition-colors"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M19 12H5M12 5l-7 7 7 7" />
-          </svg>
+          <ChevronLeft size={16} />
           Mi equipo
         </button>
 
@@ -343,8 +341,10 @@ export default function FormularioEnfermero() {
               type="submit"
               disabled={guardando}
               className="flex-1 py-2.5 rounded-lg text-sm font-medium
-                         bg-marca-base border border-marca-mid text-marca-pale
-                         hover:bg-marca-dark disabled:opacity-50 transition-colors"
+                         text-marca-border 
+                        bg-marca-muted
+                        hover:text-marca-pale
+                        hover:bg-marca-border2 transition-colors"
             >
               {guardando
                 ? 'Guardando…'

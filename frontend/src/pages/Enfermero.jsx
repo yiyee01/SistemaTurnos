@@ -43,13 +43,14 @@ export default function Enfermero() {
         onCerrarSesion={cerrarSesion}
       />
 
-      <VistaSemanal
+      {/* <VistaSemanal
         turnosAsignados={turnosAsignados}
         semanaOffset={semanaOffset}
         onAnterior={() => setSemanaOffset(s => s - 1)}
         onSiguiente={() => setSemanaOffset(s => s + 1)}
         onSeleccionarDia={setDiaSeleccionado}
-      />
+      /> */}
+
       <div className="max-w-2xl mx-auto">
         <CalendarioMensual
           turnosAsignados={turnosAsignados}

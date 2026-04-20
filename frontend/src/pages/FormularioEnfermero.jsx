@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase/client'
 import { ChevronLeft } from 'lucide-react'
+import { PantallaCarga } from '../components/PantallaCarga'
 
 const campoVacio = {
   nombre: '',
@@ -151,7 +152,7 @@ export default function FormularioEnfermero() {
   if (cargando) {
     return (
       <div className="min-h-screen bg-marca-bg flex items-center justify-center">
-        <p className="text-sm text-marca-muted">Cargando...</p>
+        <PantallaCarga mensaje="Verificando sesión..." />;
       </div>
     )
   }

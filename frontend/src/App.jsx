@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { PageWrapper } from './components/PageWrapper'
 import { useAuth } from './hooks/useAuth'
+import { PantallaCarga } from './components/PantallaCarga'
 import Login from './pages/Login'
 import Jefe from './pages/Jefe'
 import Enfermero from './pages/Enfermero'
@@ -10,11 +11,11 @@ import MiEquipo from './pages/MiEquipo'
 import FormularioEnfermero from './pages/FormularioEnfermero'
 import HistorialPlanillas from './pages/HistorialPlanillas'
 
-//Funcion que permite que se protega cada pagina como la de jefeEnfermero validando que sea
-//Un jefe el que esta en la pagina
+//Funcion que permite que se proteja cada pagina como la de jefe y enfermero validando que sea
+//Un jefe o enfermero el que esta en la pagina
 function RutaProtegida({ children, rolRequerido }) {
   const { session, rol, cargando } = useAuth()
-  if (cargando) return <div>Cargando...</div>
+  if (cargando) return <PantallaCarga mensaje="Verificando sesión..." />;
   if (!session) return <Navigate to="/login" />
   if (rol !== rolRequerido) return <Navigate to="/login" />
 

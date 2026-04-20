@@ -50,5 +50,6 @@ export function useTurnos(id_enfermero: string | undefined, id_hospital: number,
         }
     }
 
+    //Agregar funcion para traer los turnos en borrador de un jefe
     return { turnos, cargando, recargar: cargar_turnos };
 }

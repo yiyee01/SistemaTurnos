@@ -3,13 +3,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "../supabase/client";
 import { Session } from "@supabase/supabase-js";
 
-// MODO DESARROLLO
-const DEV_MODE = import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEV_AUTH === 'true'; // true en npm run dev, false en build
-const DEV_ROL = "jefe"; // cambiá acá para probar otros roles
-
 export function useAuth() {
 
-  // ── PRODUCCIÓN: lógica real con Supabase ──────────────────────────
+  // ── PRODUCCIÓN ──────────────────────────
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [rol, setRol] = useState<'jefe' | 'enfermero' | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);

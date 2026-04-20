@@ -11,6 +11,8 @@ import { BottomSheet } from '../components/jefe/BottomSheet'
 import { ModalGuardar } from '../components/jefe/ModalGuardar'
 import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
 import { Loader2 } from 'lucide-react'
+import { PantallaCarga } from '../components/PantallaCarga'
+import { useGuardar } from '../hooks/useGuardar'
 
 const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 
@@ -45,16 +47,13 @@ export default function Jefe() {
 
   // Usamos useEquipo que ya carga todo: enfermeros, sus lugares de trabajo, hospitales y sectores
   const { enfermeros, hospitales, sectores, cargando } = useEquipo(session?.user?.id)
-
   const [lunesBase, setLunesBase] = useState(() => getLunes(new Date()))
   const semanaActual = generarSemana(lunesBase)
   const [turnosAsignados, setTurnosAsignados] = useState({})
   const [limiteHoras, setLimiteHoras] = useState(48)
   const [modalGuardar, setModalGuardar] = useState(null)
   const [exportando, setExportando] = useState(false)
-
-  // TODO: Obtener el sectorId del jefe desde la tabla 'trabaja_en' o enfermeros al cargar
-  const [sectorId, setSectorId] = useState(1)
+  const { guardarBorrador, guardarPlanificacion } = useGuardar()
 
   const [filtroHospital, setFiltroHospital] = useState('')
   const [filtroSector, setFiltroSector] = useState('')
@@ -115,6 +114,14 @@ export default function Jefe() {
     // 1. Solapamiento estricto
     if (turnosHoy.some(t => t.tipo_id === turnoDestinoId)) {
       return "No puedes asignar exactamente el mismo turno el mismo día."
+    }
+
+    // 2. Franco es excluyente — no puede convivir con ningún otro turno
+    if (turnoDestinoId === 'FR' && turnosHoy.length > 0) {
+      return "El día de franco no puede combinarse con ningún otro turno."
+    }
+    if (turnoDestinoId !== 'FR' && turnosHoy.some(t => t.tipo_id === 'FR')) {
+      return "Este día ya tiene un franco asignado. Eliminalo antes de agregar otro turno."
     }
 
     const idxDia = semanaActual.findIndex(d => d.id === fechaId)
@@ -238,29 +245,19 @@ export default function Jefe() {
   }
 
   // ── Abrir modales ──
-  const guardarBorrador = () => setModalGuardar('borrador')
-  const publicarSemana = () => setModalGuardar('planificacion')
+  const abrirModalBorrador = () => setModalGuardar('borrador')
+  const abrirModalPlanificacion = () => setModalGuardar('planificacion')
 
   // ── Ejecutar el guardado real (llamado por el modal al confirmar) ──
   async function ejecutarGuardado() {
-    // 1. Preparamos el payload exacto para la Edge Function
-    const estado_json = {
-      turnos: turnosAsignados,
-      limiteHoras
-    }
-
-    const payload = {
-      mes: lunesBase.getMonth() + 1, // o el mes que corresponda según lógica
-      anio: lunesBase.getFullYear(),
-      modo: modalGuardar, // 'borrador' | 'planificacion'
-      id_sector: sectorId,
-      estado_json,
-    }
-
-    // TODO: reemplazar por: await supabase.functions.invoke('guardar-planificacion', { body: payload })
-    console.log('Enviando a Edge Function:', payload)
-    return { ok: true }
+    const hospitalId = filtroHospital ? Number(filtroHospital) : 0
+    const sectorId = filtroSector ? Number(filtroSector) : 0
+    if (modalGuardar === 'borrador')
+      return await guardarBorrador(turnosAsignados, sectorId, lunesBase, hospitalId)
+    if (modalGuardar === 'planificacion')
+      return await guardarPlanificacion(turnosAsignados, sectorId, lunesBase, hospitalId)
   }
+
 
   async function handleExportarPDF() {
     setExportando(true)
@@ -284,8 +281,8 @@ export default function Jefe() {
           semana={semanaActual}
           limiteHoras={limiteHoras}
           onCambiarLimite={setLimiteHoras}
-          onGuardar={guardarBorrador}
-          onPublicar={publicarSemana}
+          onGuardar={abrirModalBorrador}
+          onPublicar={abrirModalPlanificacion}
           onCerrarSesion={cerrarSesion}
           onSemanaAnterior={() => cambiarSemana(-1)}
           onSemanaSiguiente={() => cambiarSemana(1)}
@@ -325,7 +322,7 @@ export default function Jefe() {
         <BancoFichas />
 
         {cargando ? (
-          <div className="py-10 text-center text-sm text-marca-muted">Cargando base de datos...</div>
+          <PantallaCarga mensaje="Cargando datos..." pantallaCompleta={false} />
         ) : (
           <TablaTurnos
             enfermeros={enfermerosAplanificar}

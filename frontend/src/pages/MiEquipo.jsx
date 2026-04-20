@@ -6,6 +6,7 @@ import { useEquipo } from '../hooks/useEquipo'
 import { useAuth } from '../hooks/useAuth'
 import { ModalConfirmarBaja } from '../components/jefe/ModalConfirmarBaja'
 import { LogOut, UserRoundPen, UserRoundX, UserPlus, Search, Filter, X, ChevronLeft } from 'lucide-react'
+import { PantallaCarga } from '../components/PantallaCarga'
 
 export default function MiEquipo() {
   const navigate = useNavigate()
@@ -52,6 +53,7 @@ export default function MiEquipo() {
               <ChevronLeft size={16} />
               Volver
             </button>
+            {/*
             <button
               onClick={() => navigate('/jefe/equipo/nuevo')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
@@ -62,7 +64,8 @@ export default function MiEquipo() {
             >
               <UserPlus size={16} />
               Nuevo enfermero
-            </button>
+            </button> nuevo enfermero*/}
+
           </div>
         </div>
 
@@ -108,7 +111,7 @@ export default function MiEquipo() {
               ))}
             </select>
 
-            {/* Toggle "dados de baja" */}
+            {/* Toggle "dados de baja" 
             <button
               onClick={() => setMostrarBaja(v => !v)}
               className={`col-span-2 lg:col-span-1 flex items-center justify-center gap-2
@@ -120,13 +123,15 @@ export default function MiEquipo() {
             >
               <span className={`w-2 h-2 rounded-full ${mostrarBaja ? 'bg-marca-mid' : 'bg-marca-border2'}`} />
               Dados de baja
-            </button>
+            </button> */}
           </div>
         </div>
 
         {/* ── MOBILE: tarjetas ── */}
         {cargando ? (
-          <div className="py-10 text-center text-sm text-marca-muted lg:hidden">Cargando...</div>
+          <div className="lg:hidden">
+            <PantallaCarga mensaje="Cargando equipo..." pantallaCompleta={false} />
+          </div>
         ) : filtrados.length === 0 ? (
           <div className="py-10 text-center text-sm text-marca-muted2 lg:hidden">
             No se encontraron enfermeros.
@@ -174,6 +179,7 @@ export default function MiEquipo() {
                     >
                       <UserRoundPen />
                     </button>
+                    {/*}
                     <button
                       onClick={() => setEnfermeroaDarDeBaja(e)}
                       title={activo ? 'Dar de baja' : 'Reactivar'}
@@ -182,7 +188,7 @@ export default function MiEquipo() {
                                  hover:border-red-800 transition-all"
                     >
                       <UserRoundX />
-                    </button>
+                    </button> boton eliminar enfermero mobile*/}
                   </div>
                 </div>
               )
@@ -191,68 +197,72 @@ export default function MiEquipo() {
         )}
 
         {/* ── DESKTOP: tabla grid ── */}
-        <div className="hidden lg:block bg-marca-surface border border-marca-border rounded-xl overflow-x-auto scrollbar-marca">
-          <div className="min-w-[740px]">
+        {cargando ? (
+          <div className="hidden lg:block">
+            <PantallaCarga mensaje="Cargando equipo..." pantallaCompleta={false} />
+          </div>
+        ) : (
+          <div className="hidden lg:block bg-marca-surface border border-marca-border rounded-xl overflow-x-auto scrollbar-marca">
+            <div className="min-w-[740px]">
 
-            {/* Cabecera */}
-            <div className="grid border-b border-marca-border px-4 py-2.5"
-              style={{ gridTemplateColumns: '220px 100px 130px 100px 110px 1fr' }}>
-              {['Enfermero', 'Matrícula', 'Hospital', 'Sector', 'Rol', ''].map((h, i) => (
-                <div key={i} className="text-xs font-medium uppercase tracking-widest text-marca-muted">
-                  {h}
-                </div>
-              ))}
-            </div>
-
-            {/* Filas */}
-            {cargando ? (
-              <div className="py-10 text-center text-sm text-marca-muted">Cargando...</div>
-            ) : filtrados.length === 0 ? (
-              <div className="py-10 text-center text-sm text-marca-muted2">
-                No se encontraron enfermeros.
+              {/* Cabecera */}
+              <div className="grid border-b border-marca-border px-4 py-2.5"
+                style={{ gridTemplateColumns: '220px 100px 130px 100px 110px 1fr' }}>
+                {['Enfermero', 'Matrícula', 'Hospital', 'Sector', 'Rol', ''].map((h, i) => (
+                  <div key={i} className="text-xs font-medium uppercase tracking-widest text-marca-muted">
+                    {h}
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="divide-y divide-marca-border">
-                {filtrados.map(e => {
-                  const hospital = e.trabaja_en?.[0]?.hospitales?.nombre ?? '—'
-                  const sector = e.trabaja_en?.[0]?.sectores?.nombre ?? '—'
-                  const activo = e.estado === 'activo'
 
-                  return (
-                    <div
-                      key={e.id}
-                      className={`grid px-4 py-3 items-center hover:bg-marca-surface2 transition-colors
+              {/* Filas */}
+              {filtrados.length === 0 ? (
+                <div className="py-10 text-center text-sm text-marca-muted2">
+                  No se encontraron enfermeros.
+                </div>
+              ) : (
+                <div className="divide-y divide-marca-border">
+                  {filtrados.map(e => {
+                    const hospital = e.trabaja_en?.[0]?.hospitales?.nombre ?? '—'
+                    const sector = e.trabaja_en?.[0]?.sectores?.nombre ?? '—'
+                    const activo = e.estado === 'activo'
+
+                    return (
+                      <div
+                        key={e.id}
+                        className={`grid px-4 py-3 items-center hover:bg-marca-surface2 transition-colors
                                   ${!activo ? 'opacity-40' : ''}`}
-                      style={{ gridTemplateColumns: '220px 100px 130px 100px 110px 1fr' }}
-                    >
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-medium text-marca-pale truncate">
-                          {e.nombre} {e.apellido}
-                        </p>
-                        <p className="text-xs text-marca-muted mt-0.5">DNI {e.dni}</p>
-                      </div>
-                      <p className="text-xs text-marca-muted">{e.matricula ?? '—'}</p>
-                      <p className="text-xs text-marca-muted">{hospital}</p>
-                      <p className="text-xs text-marca-muted">{sector}</p>
-                      <div>
-                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium
+                        style={{ gridTemplateColumns: '220px 100px 130px 100px 110px 1fr' }}
+                      >
+                        <div className="overflow-hidden">
+                          <p className="text-sm font-medium text-marca-pale truncate">
+                            {e.nombre} {e.apellido}
+                          </p>
+                          <p className="text-xs text-marca-muted mt-0.5">DNI {e.dni}</p>
+                        </div>
+                        <p className="text-xs text-marca-muted">{e.matricula ?? '—'}</p>
+                        <p className="text-xs text-marca-muted">{hospital}</p>
+                        <p className="text-xs text-marca-muted">{sector}</p>
+                        <div>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium
                                           ${e.rol === 'jefe'
-                            ? 'bg-marca-dark text-marca-light border border-marca-base'
-                            : 'bg-marca-surface2 text-marca-muted border border-marca-border2'
-                          }`}>
-                          {e.rol === 'jefe' ? 'Jefe' : 'Enfermero'}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 justify-end items-center">
-                        <button
-                          onClick={() => navigate(`/jefe/equipo/editar/${e.id}`)}
-                          title="Editar"
-                          className="p-1.5 rounded-md border border-marca-border2
+                              ? 'bg-marca-dark text-marca-light border border-marca-base'
+                              : 'bg-marca-surface2 text-marca-muted border border-marca-border2'
+                            }`}>
+                            {e.rol === 'jefe' ? 'Jefe' : 'Enfermero'}
+                          </span>
+                        </div>
+                        <div className="flex gap-2 justify-end items-center">
+                          <button
+                            onClick={() => navigate(`/jefe/equipo/editar/${e.id}`)}
+                            title="Editar"
+                            className="p-1.5 rounded-md border border-marca-border2
                                      text-marca-muted hover:text-marca-light
                                      hover:border-marca-base transition-all"
-                        >
-                          <UserRoundPen />
-                        </button>
+                          >
+                            <UserRoundPen />
+                          </button>
+                          {/*}
                         <button
                           onClick={() => setEnfermeroaDarDeBaja(e)}
                           title={activo ? 'Dar de baja' : 'Reactivar'}
@@ -261,15 +271,16 @@ export default function MiEquipo() {
                                      hover:border-red-800 transition-all"
                         >
                           <UserRoundX />
-                        </button>
+                        </button> boton eliminar enfermero */}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 

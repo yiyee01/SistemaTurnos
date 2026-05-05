@@ -8,6 +8,7 @@ export function useAuth() {
   // ── PRODUCCIÓN ──────────────────────────
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [rol, setRol] = useState<'jefe' | 'enfermero' | null>(null);
+  const [nombre, setNombre] = useState<string>('');
   const [cargando, setCargando] = useState<boolean>(true);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export function useAuth() {
   async function cargarRol(userId: string) {
     const { data, error } = await supabase
       .from("enfermeros")
-      .select("rol")
+      .select("rol, nombre")
       .eq("id", userId)
       .single();
 
@@ -46,6 +47,7 @@ export function useAuth() {
       setRol(null);
     } else {
       setRol((data as any).rol as 'jefe' | 'enfermero' | null);
+      setNombre((data as any).nombre ?? '');
     }
     setCargando(false);
   }
@@ -54,5 +56,5 @@ export function useAuth() {
     await supabase.auth.signOut();
   }
 
-  return { session, rol, cargando, cerrarSesion };
+  return { session, rol, nombre, cargando, cerrarSesion };
 }

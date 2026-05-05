@@ -3,16 +3,15 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 /**
- * Genera y descarga un PDF con la planilla de turnos.
+ * Genera y descarga un PDF con la planilla de turnos mensual/semanal.
  *
  * @param {Object} params
  * @param {Array}  params.enfermeros       - Array de { id, nombre, apellido }
- * @param {Array}  params.semana           - Array de 7 { id: 'YYYY-MM-DD', nombre: 'Lun', numero: 14 }
+ * @param {Array}  params.dias             - Array de { id: 'YYYY-MM-DD', nombre: 'Lun', numero: 14 }
  * @param {Object} params.turnosAsignados  - { 'enfermeroId|fecha': [{ tipo_id, nombre }] }
- * @param {number} params.limiteHoras      - Límite semanal configurado
  * @param {string} [params.titulo]         - Título opcional del PDF
  */
-export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limiteHoras, titulo }) {
+export function exportarPlanillaPDF({ enfermeros, dias, turnosAsignados, titulo }) {
   // ── Configuración ─────────────────────────────────────
   const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 
@@ -37,12 +36,12 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
   // ── Documento ─────────────────────────────────────────
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
 
-  const MARGEN = 14
+  const MARGEN = 10
   const ANCHO  = doc.internal.pageSize.getWidth()
   const hoy    = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-  const rangoSemana = semana.length > 0
-    ? `${semana[0].numero} ${_nombreMes(semana[0].id)} — ${semana[6].numero} ${_nombreMes(semana[6].id)}`
+  const rangoDias = dias.length > 0
+    ? `${dias[0].numero} ${_nombreMes(dias[0].id)} — ${dias[dias.length-1].numero} ${_nombreMes(dias[dias.length-1].id)}`
     : ''
 
   // ── Encabezado ────────────────────────────────────────
@@ -56,40 +55,33 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
   doc.setTextColor(255, 255, 255)
   doc.text('Sistema de Turnos', MARGEN, 13)
 
-  // Semana
+  // Rango de fechas
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
   doc.setTextColor(160, 170, 190)
-  doc.text(`Semana del ${rangoSemana}`, ANCHO / 2, 13, { align: 'center' })
+  doc.text(`Período: ${rangoDias}`, ANCHO / 2, 13, { align: 'center' })
 
   // Fecha generación
   doc.text(`Generado: ${hoy}`, ANCHO - MARGEN, 13, { align: 'right' })
 
   // Título secundario
-  const tituloDoc = titulo ?? `Planilla semanal — ${rangoSemana}`
+  const tituloDoc = titulo ?? `Planilla de Turnos — ${rangoDias}`
   doc.setFontSize(14)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(20, 25, 35)
   doc.text(tituloDoc, MARGEN, 30)
 
-  // Límite de horas (subtítulo)
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(120, 130, 150)
-  if (limiteHoras) {
-    doc.text(`Límite semanal: ${limiteHoras} horas por enfermero`, MARGEN, 37)
-  }
-
   // ── Tabla ─────────────────────────────────────────────
 
-  // Columnas: Enfermero + 7 días + Total horas
+  // Columnas: Enfermero + todos los días + Total horas
+  // Si son 31 días, el ancho debe ser muy ajustado.
   const columnas = [
     { header: 'Enfermero', dataKey: 'enfermero' },
-    ...semana.map(dia => ({
-      header: `${dia.nombre}\n${dia.numero}`,
+    ...dias.map(dia => ({
+      header: `${dia.nombre[0]}\n${dia.numero}`, // 'L\n14' para ahorrar espacio
       dataKey: dia.id,
     })),
-    { header: 'Total\nhoras', dataKey: 'total' },
+    { header: 'Hs', dataKey: 'total' }, // Encabezado corto para horas
   ]
 
   // Filas
@@ -97,37 +89,44 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
     const fila = { enfermero: `${enf.nombre} ${enf.apellido}` }
     let totalHoras = 0
 
-    semana.forEach(dia => {
+    dias.forEach(dia => {
       const celdaId = `${enf.id}|${dia.id}`
       const turnos  = turnosAsignados[celdaId] ?? []
       fila[dia.id]  = turnos.map(t => t.tipo_id).join(' / ') || ''
       totalHoras   += turnos.reduce((h, t) => h + (HORAS_TURNO[t.tipo_id] ?? 0), 0)
     })
 
-    fila.total = totalHoras > 0 ? `${totalHoras}h` : '—'
+    fila.total = totalHoras > 0 ? `${totalHoras}` : '—'
     return fila
   })
 
+  // Ancho dinámico para el nombre dependiendo de la cantidad de días (7 vs 31)
+  const isMonth = dias.length > 15
+  const anchoNombre = isMonth ? 32 : 46
+  const fontSizeHeader = isMonth ? 6.5 : 8
+  const fontSizeBody = isMonth ? 6.5 : 8.5
+
   autoTable(doc, {
-    startY:  42,
+    startY:  36,
     margin:  { left: MARGEN, right: MARGEN },
     columns: columnas,
     body:    filas,
 
     styles: {
-      fontSize:  8.5,
-      cellPadding: 3,
+      fontSize:  fontSizeBody,
+      cellPadding: isMonth ? 1 : 3,
       valign: 'middle',
       halign: 'center',
       lineColor: [220, 225, 235],
-      lineWidth: 0.2,
+      lineWidth: 0.1,
     },
 
     headStyles: {
       fillColor: [15, 17, 23],
       textColor: [200, 210, 230],
       fontStyle: 'bold',
-      fontSize: 8,
+      fontSize: fontSizeHeader,
+      cellPadding: isMonth ? 1 : 2,
     },
 
     columnStyles: {
@@ -135,11 +134,11 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
         halign: 'left',
         fontStyle: 'bold',
         textColor: [20, 25, 35],
-        cellWidth: 46,
+        cellWidth: anchoNombre,
       },
       total: {
         fontStyle: 'bold',
-        cellWidth: 16,
+        cellWidth: isMonth ? 10 : 16,
       },
     },
 
@@ -151,7 +150,7 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
     didDrawCell(data) {
       if (data.section !== 'body') return
       const col = data.column.dataKey
-      if (!semana.some(d => d.id === col)) return          // solo columnas de día
+      if (!dias.some(d => d.id === col)) return
 
       const texto = data.cell.raw ?? ''
       if (!texto) return
@@ -165,14 +164,14 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
       if (!cfg) return
 
       const { x, y, width, height } = data.cell
-      const PAD = 1.5
+      const PAD = isMonth ? 0.5 : 1.5
       doc.setFillColor(...cfg.bg)
-      doc.roundedRect(x + PAD, y + PAD, width - PAD * 2, height - PAD * 2, 1.5, 1.5, 'F')
+      doc.roundedRect(x + PAD, y + PAD, width - PAD * 2, height - PAD * 2, 1, 1, 'F')
 
-      doc.setFontSize(7.5)
+      doc.setFontSize(isMonth ? 6 : 7.5)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...cfg.text)
-      doc.text(tipo, x + width / 2, y + height / 2 + 0.5, { align: 'center' })
+      doc.text(tipo, x + width / 2, y + height / 2 + (isMonth ? 0.3 : 0.5), { align: 'center', baseline: 'middle' })
     },
   })
 
@@ -205,10 +204,15 @@ export function exportarPlanillaPDF({ enfermeros, semana, turnosAsignados, limit
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(160, 170, 190)
   doc.text('Sistema de Turnos de Enfermería', MARGEN, ALTO - 6)
-  doc.text(`Pág. 1`, ANCHO - MARGEN, ALTO - 6, { align: 'right' })
+  
+  const totalPages = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.text(`Pág. ${i} / ${totalPages}`, ANCHO - MARGEN, ALTO - 6, { align: 'right' })
+  }
 
   // ── Descargar ─────────────────────────────────────────
-  const nombreArchivo = `planilla_${semana[0]?.id ?? 'semana'}.pdf`
+  const nombreArchivo = `planilla_${dias[0]?.id ?? 'mes'}.pdf`
   doc.save(nombreArchivo)
 }
 

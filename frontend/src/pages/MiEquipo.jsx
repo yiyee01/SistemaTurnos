@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 import { ModalConfirmarBaja } from '../components/jefe/ModalConfirmarBaja'
 import { LogOut, UserRoundPen, UserRoundX, UserPlus, Search, Filter, X, ChevronLeft } from 'lucide-react'
 import { PantallaCarga } from '../components/PantallaCarga'
+import { ProcesandoOverlay } from '../components/ProcesandoOverlay'
 
 export default function MiEquipo() {
   const navigate = useNavigate()
@@ -17,13 +18,15 @@ export default function MiEquipo() {
   const [filtroSector, setFiltroSector] = useState('')
   const [mostrarBaja, setMostrarBaja] = useState(false)
   const [enfermeroaDarDeBaja, setEnfermeroaDarDeBaja] = useState(null)
+  const [procesandoBaja, setProcesandoBaja] = useState(false)
+  const [errorBaja, setErrorBaja] = useState(null)
 
   // Filtrado local
   const filtrados = enfermeros.filter(e => {
     const nombreCompleto = `${e.nombre} ${e.apellido}`.toLowerCase()
     const hospital = e.trabaja_en?.[0]?.hospitales?.nombre ?? ''
     const sector = e.trabaja_en?.[0]?.sectores?.nombre ?? ''
-    const activo = e.estado === 'activo'
+    const activo = e.trabaja_en?.[0]?.activo ?? false
 
     return (
       nombreCompleto.includes(buscar.toLowerCase()) &&
@@ -53,7 +56,6 @@ export default function MiEquipo() {
               <ChevronLeft size={16} />
               Volver
             </button>
-            {/*
             <button
               onClick={() => navigate('/jefe/equipo/nuevo')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
@@ -64,7 +66,7 @@ export default function MiEquipo() {
             >
               <UserPlus size={16} />
               Nuevo enfermero
-            </button> nuevo enfermero*/}
+            </button>
 
           </div>
         </div>
@@ -111,7 +113,7 @@ export default function MiEquipo() {
               ))}
             </select>
 
-            {/* Toggle "dados de baja" 
+            {/* Toggle "dados de baja"
             <button
               onClick={() => setMostrarBaja(v => !v)}
               className={`col-span-2 lg:col-span-1 flex items-center justify-center gap-2
@@ -141,7 +143,7 @@ export default function MiEquipo() {
             {filtrados.map(e => {
               const hospital = e.trabaja_en?.[0]?.hospitales?.nombre ?? '—'
               const sector = e.trabaja_en?.[0]?.sectores?.nombre ?? '—'
-              const activo = e.estado === 'activo'
+              const activo = e.trabaja_en?.[0]?.activo ?? false
               return (
                 <div
                   key={e.id}
@@ -179,16 +181,16 @@ export default function MiEquipo() {
                     >
                       <UserRoundPen />
                     </button>
-                    {/*}
                     <button
                       onClick={() => setEnfermeroaDarDeBaja(e)}
                       title={activo ? 'Dar de baja' : 'Reactivar'}
-                      className="p-2 rounded-lg border border-marca-border2
-                                 text-marca-muted hover:text-red-400
-                                 hover:border-red-800 transition-all"
+                      className={`p-2 rounded-lg border border-marca-border2 transition-all
+                                 ${activo 
+                                   ? 'text-marca-muted hover:text-red-400 hover:border-red-800' 
+                                   : 'text-marca-muted hover:text-green-400 hover:border-green-800'}`}
                     >
                       <UserRoundX />
-                    </button> boton eliminar enfermero mobile*/}
+                    </button>
                   </div>
                 </div>
               )
@@ -225,7 +227,7 @@ export default function MiEquipo() {
                   {filtrados.map(e => {
                     const hospital = e.trabaja_en?.[0]?.hospitales?.nombre ?? '—'
                     const sector = e.trabaja_en?.[0]?.sectores?.nombre ?? '—'
-                    const activo = e.estado === 'activo'
+                    const activo = e.trabaja_en?.[0]?.activo ?? false
 
                     return (
                       <div
@@ -262,16 +264,16 @@ export default function MiEquipo() {
                           >
                             <UserRoundPen />
                           </button>
-                          {/*}
-                        <button
-                          onClick={() => setEnfermeroaDarDeBaja(e)}
-                          title={activo ? 'Dar de baja' : 'Reactivar'}
-                          className="p-1.5 rounded-md border border-marca-border2
-                                     text-marca-muted hover:text-red-400
-                                     hover:border-red-800 transition-all"
-                        >
-                          <UserRoundX />
-                        </button> boton eliminar enfermero */}
+                          <button
+                            onClick={() => setEnfermeroaDarDeBaja(e)}
+                            title={activo ? 'Dar de baja' : 'Reactivar'}
+                            className={`p-1.5 rounded-md border border-marca-border2 transition-all
+                                       ${activo 
+                                         ? 'text-marca-muted hover:text-red-400 hover:border-red-800' 
+                                         : 'text-marca-muted hover:text-green-400 hover:border-green-800'}`}
+                          >
+                            <UserRoundX />
+                          </button>
                         </div>
                       </div>
                     )
@@ -287,12 +289,35 @@ export default function MiEquipo() {
       {/* Modal dar de baja */}
       <ModalConfirmarBaja
         enfermero={enfermeroaDarDeBaja}
-        onConfirmar={() => {
-          toggleBaja(enfermeroaDarDeBaja)
+        onConfirmar={async () => {
+          const enf = enfermeroaDarDeBaja
           setEnfermeroaDarDeBaja(null)
+          setProcesandoBaja(true)
+          setErrorBaja(null)
+          
+          const { error } = await toggleBaja(enf)
+          setProcesandoBaja(false)
+          
+          if (error) {
+            setErrorBaja(error) // Usar el string que devuelve el hook
+            setTimeout(() => setErrorBaja(null), 4000)
+          }
         }}
         onCancelar={() => setEnfermeroaDarDeBaja(null)}
       />
+
+      {procesandoBaja && <ProcesandoOverlay mensaje="Procesando baja…" submensaje="Por favor, esperá un instante." />}
+
+      {/* Toast de error */}
+      {errorBaja && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm
+                         bg-red-950/95 backdrop-blur-md border border-red-800 text-red-100
+                         px-4 py-3.5 rounded-2xl shadow-2xl text-sm font-medium
+                         flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
+          <div className="w-6 h-6 rounded-full bg-red-900 border border-red-700 flex items-center justify-center shrink-0">!</div>
+          <p className="flex-1 leading-snug">{errorBaja}</p>
+        </div>
+      )}
 
     </div>
   )

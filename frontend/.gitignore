@@ -26,3 +26,8 @@ dist-ssr
 #Archivo con las credenciales de supabase
 .env
 .env.local
+cosas_para_despues.txt
+supabase.txt
+actualizar_rpc.sql
+corregir_baja.sql
+toggle_baja.sql

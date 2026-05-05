@@ -21,7 +21,7 @@ export function TablaTurnos({
                 <div className="flex bg-marca-surface2 border-b border-marca-border">
 
                     {/* Columna nombre — sticky */}
-                    <div className="w-32 shrink-0 p-3 text-xs font-medium
+                    <div className="w-40 shrink-0 p-3 text-xs font-medium
                           uppercase tracking-widest text-marca-muted
                           border-r border-marca-border
                           sticky left-0 bg-marca-surface2 z-10">

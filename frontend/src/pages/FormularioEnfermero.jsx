@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../supabase/client'
+import { useAuth } from '../hooks/useAuth'
 import { ChevronLeft } from 'lucide-react'
 import { PantallaCarga } from '../components/PantallaCarga'
+import { ProcesandoOverlay } from '../components/ProcesandoOverlay'
 
 const campoVacio = {
   nombre: '',
@@ -31,11 +33,14 @@ export default function FormularioEnfermero() {
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  
+  const { session, rol } = useAuth()
+  const esJefe = rol === 'jefe'
 
   useEffect(() => {
-    cargarOpciones()
+    if (session?.user?.id) cargarOpciones()
     if (esEdicion) cargarEnfermero()
-  }, [id])
+  }, [id, session?.user?.id])
 
   async function cargarOpciones() {
     const [{ data: hosp }, { data: sect }, { data: jef }] = await Promise.all([
@@ -54,13 +59,14 @@ export default function FormularioEnfermero() {
       .from('enfermeros')
       .select(`
         id, nombre, apellido, dni, matricula, especialidad, rol, id_jefe,
-        trabaja_en ( hospital_id, sector_id )
+        trabaja_en!trabaja_en_enfermero_id_fkey ( hospital_id, sector_id )
       `)
       .eq('id', id)
       .single()
 
     if (error) {
-      setError('No se pudo cargar el enfermero.')
+      console.error(error);
+      setError(`No se pudo cargar el enfermero: ${error.message}`)
     } else {
       setForm({
         nombre: data.nombre ?? '',
@@ -81,7 +87,13 @@ export default function FormularioEnfermero() {
 
   function handleChange(e) {
     const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
+    setForm(prev => {
+      const next = { ...prev, [name]: value }
+      if (name === 'hospital_id') {
+        next.sector_id = '' // Resetear sector si cambia el hospital
+      }
+      return next
+    })
   }
 
   // Validación del lado del cliente
@@ -91,8 +103,11 @@ export default function FormularioEnfermero() {
     if (!form.dni.trim()) return 'El DNI es obligatorio.'
     if (!form.hospital_id) return 'Seleccioná un hospital.'
     if (!form.sector_id) return 'Seleccioná un sector.'
-    if (form.rol === 'enfermero' && !form.id_jefe)
+    
+    // Si es jefe creando, el id_jefe será él mismo, si es admin, debe elegir.
+    if (form.rol === 'enfermero' && !esJefe && !form.id_jefe)
       return 'Un enfermero debe tener un jefe asignado.'
+      
     if (!esEdicion) {
       if (!form.email.trim()) return 'El email es obligatorio.'
       if (form.password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.'
@@ -122,7 +137,7 @@ export default function FormularioEnfermero() {
         rol: form.rol,
         hospital_id: Number(form.hospital_id),
         sector_id: Number(form.sector_id),
-        id_jefe: form.id_jefe || null,
+        id_jefe: esJefe ? session?.user?.id : (form.id_jefe || null),
       }
       : {
         nombre: form.nombre,
@@ -135,13 +150,13 @@ export default function FormularioEnfermero() {
         rol: form.rol,
         hospital_id: Number(form.hospital_id),
         sector_id: Number(form.sector_id),
-        id_jefe: form.id_jefe || null,
+        id_jefe: esJefe ? session?.user?.id : (form.id_jefe || null),
       }
 
     const { data, error } = await supabase.functions.invoke(funcion, { body })
 
     if (error) {
-      setError(data?.error ?? error.message ?? 'Ocurrió un error.')
+      setError(error?.message ?? data?.error ?? 'Ocurrió un error al guardar.')
     } else {
       navigate('/jefe/equipo')
     }
@@ -275,28 +290,30 @@ export default function FormularioEnfermero() {
                 </select>
               </div>
 
-              {/* Jefe */}
-              <div>
-                <label className="block text-xs font-medium uppercase tracking-widest
-                                   text-marca-light mb-1.5">
-                  Jefe a cargo
-                </label>
-                <select
-                  name="id_jefe"
-                  value={form.id_jefe}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm
-                             bg-marca-bg border border-marca-border2 text-marca-pale
-                             outline-none focus:border-marca-mid transition-colors cursor-pointer"
-                >
-                  <option value="">Sin jefe (es jefe)</option>
-                  {jefes.map(j => (
-                    <option key={j.id} value={j.id}>
-                      {j.nombre} {j.apellido}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Jefe - Oculto si el usuario logueado es jefe (se asigna automático) */}
+              {!esJefe && (
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-widest
+                                     text-marca-light mb-1.5">
+                    Jefe a cargo
+                  </label>
+                  <select
+                    name="id_jefe"
+                    value={form.id_jefe}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2.5 rounded-lg text-sm
+                               bg-marca-bg border border-marca-border2 text-marca-pale
+                               outline-none focus:border-marca-mid transition-colors cursor-pointer"
+                  >
+                    <option value="">Seleccioná un jefe...</option>
+                    {jefes.map(j => (
+                      <option key={j.id} value={j.id}>
+                        {j.nombre} {j.apellido}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Rol */}
               <div>
@@ -355,6 +372,8 @@ export default function FormularioEnfermero() {
 
         </form>
       </div>
+
+      {guardando && <ProcesandoOverlay mensaje="Guardando datos…" submensaje="Aguardá un instante por favor." />}
     </div>
   )
 }

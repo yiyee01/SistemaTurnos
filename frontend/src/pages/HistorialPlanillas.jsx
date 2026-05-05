@@ -1,42 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase/client'
+import { useAuth } from '../hooks/useAuth'
+import { useEquipo } from '../hooks/useEquipo'
+import { ArrowLeft, ChevronLeft, ChevronRight, Edit, Lock, Check, Loader2, Download } from 'lucide-react'
+import { PantallaCarga } from '../components/PantallaCarga'
 import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
-import { ArrowLeft, ChevronLeft, ChevronRight, Edit, Lock, Check } from 'lucide-react'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
-const SVG_PDF = (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="9" y1="13" x2="15" y2="13" />
-    <line x1="9" y1="17" x2="15" y2="17" />
-  </svg>
-)
-
-// ── Modal exportando ──────────────────────────────────────
-
+// ── Modal exportando ───────────────────────────────────────
 function ModalExportando() {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.65)' }}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.65)' }}>
       <div className="w-full max-w-xs bg-marca-surface border border-marca-border
                       rounded-2xl p-6 flex flex-col items-center gap-4">
         <div className="w-12 h-12 rounded-full flex items-center justify-center
                         bg-emerald-950 border border-emerald-700 text-emerald-400">
-          <svg className="animate-spin" width="26" height="26" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-              strokeOpacity="0.25" />
-            <path d="M12 2v4" />
-          </svg>
+          <Loader2 className="animate-spin" size={26} />
         </div>
         <div className="text-center">
           <p className="text-base font-medium text-marca-pale">Exportando…</p>
@@ -47,66 +32,37 @@ function ModalExportando() {
   )
 }
 
-// ── Datos de prueba ───────────────────────────────────────
-// Reemplazar con consulta a Supabase
-const FAKE_PLANILLAS = {
-  2026: {
-    0: { enfermeros: 6, turnos: 31 },  // Enero
-    1: { enfermeros: 6, turnos: 28 },  // Febrero
-    2: { enfermeros: 7, turnos: 31 },  // Marzo
-    3: { enfermeros: 6, turnos: 30 },  // Abril (mes actual)
-  },
-  2025: {
-    0: { enfermeros: 5, turnos: 31 },
-    1: { enfermeros: 5, turnos: 28 },
-    2: { enfermeros: 6, turnos: 31 },
-    3: { enfermeros: 6, turnos: 30 },
-    4: { enfermeros: 6, turnos: 31 },
-    5: { enfermeros: 7, turnos: 30 },
-    6: { enfermeros: 7, turnos: 31 },
-    7: { enfermeros: 6, turnos: 31 },
-    8: { enfermeros: 6, turnos: 30 },
-    9: { enfermeros: 5, turnos: 31 },
-    10: { enfermeros: 5, turnos: 30 },
-    11: { enfermeros: 6, turnos: 31 },
-  },
-}
+// ── Tarjeta de mes ────────────────────────────────────────
+function TarjetaMes({ mes, indice, anio, stats, esFuturo, esActual, onEditar, onExportarPDF }) {
+  const publicada = stats !== null
 
-// ── Componente tarjeta de mes ─────────────────────────────
-
-function TarjetaMes({ mes, indice, anio, planilla, esFuturo, esActual, onEditar, onExportar }) {
-  const publicada = Boolean(planilla)
-
-  if (esFuturo || !publicada) {
-    // Mes futuro o sin planilla publicada
+  // Solo ocultamos meses sin planilla. Si fue publicado con anticipación, lo mostramos igual.
+  if (!publicada) {
     return (
-      <div
-        className="relative rounded-xl border border-dashed border-marca-border
-                   bg-marca-surface/40 p-5 flex flex-col gap-3
-                   opacity-50 select-none"
-      >
+      <div className="relative rounded-xl border border-dashed border-marca-border
+                     bg-marca-surface/40 p-5 flex flex-col gap-3 opacity-50 select-none">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-marca-muted">{mes}</span>
+          {esFuturo && (
+            <span className="text-[10px] text-marca-muted2 uppercase tracking-widest">Futuro</span>
+          )}
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-2 py-3">
-          <span className="text-marca-border2">{<Lock />}</span>
+          <Lock size={16} className="text-marca-border2" />
           <span className="text-xs text-marca-muted2">Sin planilla</span>
         </div>
       </div>
     )
   }
 
-  // Mes publicado (pasado o actual)
   return (
-    <div
-      className={`relative rounded-xl border bg-marca-surface p-5 flex flex-col gap-3
-                  transition-all duration-150 hover:bg-marca-surface2
-                  ${esActual
-          ? 'border-marca-mid shadow-[0_0_0_1px_rgba(99,102,241,0.3)] shadow-indigo-500/20'
-          : 'border-marca-border'
-        }`}
-    >
-      {/* Línea de acento superior */}
+    <div className={`relative rounded-xl border bg-marca-surface p-5 flex flex-col gap-3
+                    transition-all duration-150 hover:bg-marca-surface2
+                    ${esActual
+        ? 'border-marca-mid shadow-[0_0_0_1px_rgba(99,102,241,0.3)]'
+        : 'border-marca-border'
+      }`}>
+      {/* Línea de acento */}
       <div className={`absolute top-0 left-4 right-4 h-0.5 rounded-full
                        ${esActual ? 'bg-marca-mid' : 'bg-emerald-600'}`} />
 
@@ -114,6 +70,12 @@ function TarjetaMes({ mes, indice, anio, planilla, esFuturo, esActual, onEditar,
       <div className="flex items-start justify-between gap-2 pt-1">
         <span className="text-sm font-semibold text-marca-pale">{mes}</span>
         <div className="flex flex-col items-end gap-1">
+          <span className="text-[10px] font-medium uppercase tracking-widest
+                           text-emerald-400 bg-emerald-950 border border-emerald-800
+                           rounded-full px-2 py-0.5 leading-none flex items-center gap-1">
+            <Check size={10} />
+            Publicada
+          </span>
           {esActual && (
             <span className="text-[10px] font-medium uppercase tracking-widest
                              text-marca-light bg-marca-dark border border-marca-mid
@@ -121,42 +83,37 @@ function TarjetaMes({ mes, indice, anio, planilla, esFuturo, esActual, onEditar,
               Actual
             </span>
           )}
-          <span className="text-[10px] font-medium uppercase tracking-widest
-                           text-emerald-400 bg-emerald-950 border border-emerald-800
-                           rounded-full px-2 py-0.5 leading-none flex items-center gap-1">
-            <span className="text-emerald-400">{<Check />}</span>
-            Publicada
-          </span>
         </div>
       </div>
 
-      {/* Estadísticas */}
+      {/* Estadísticas reales */}
       <div className="flex-1">
         <p className="text-xs text-marca-muted">
-          {planilla.enfermeros} enfermeros · {planilla.turnos} turnos
+          {stats.enfermeros} enfermeros · {stats.turnos} turnos
         </p>
       </div>
 
       {/* Acciones */}
       <div className="flex gap-2 pt-1">
         <button
-          onClick={() => onEditar(anio, indice)}
-          className="flex-1 flex items-center justify-center gap-1.5
+          onClick={() => onEditar(indice, anio)}
+          className="flex-2 flex items-center justify-center gap-1.5
                      py-2 rounded-lg text-xs font-medium
                      border border-marca-border2 text-marca-muted
                      hover:text-marca-light hover:border-marca-base transition-colors"
         >
-          {<Edit />}
-          Editar
+          <Edit size={13} />
+          Editar borrador
         </button>
         <button
-          onClick={() => onExportar(anio, indice)}
+          onClick={() => onExportarPDF(indice, anio)}
           className="flex-1 flex items-center justify-center gap-1.5
                      py-2 rounded-lg text-xs font-medium
-                     bg-emerald-950 border border-emerald-800 text-emerald-400
-                     hover:bg-emerald-900 transition-colors"
+                     border border-marca-border2 text-marca-muted
+                     hover:text-marca-light hover:border-marca-base transition-colors"
+          title="Descargar PDF"
         >
-          {SVG_PDF}
+          <Download size={13} />
           PDF
         </button>
       </div>
@@ -165,51 +122,126 @@ function TarjetaMes({ mes, indice, anio, planilla, esFuturo, esActual, onEditar,
 }
 
 // ── Página principal ──────────────────────────────────────
-
 export default function HistorialPlanillas() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const { enfermeros, hospitales, sectores } = useEquipo(session?.user?.id)
+
   const hoy = new Date()
-  const mesActual = hoy.getMonth()   // 0-11
+  const mesActual = hoy.getMonth()      // 0–11
   const anioActual = hoy.getFullYear()
 
   const [anio, setAnio] = useState(anioActual)
+  const [filtroHospital, setFiltroHospital] = useState('')
+  const [filtroSector, setFiltroSector] = useState('')
+
+  // statsPorMes: { 1: { enfermeros: N, turnos: N }, 5: {...}, ... }
+  // Solo contiene los meses que tienen al menos un turno publicado
+  const [statsPorMes, setStatsPorMes] = useState({})
+  const [cargando, setCargando] = useState(false)
   const [exportando, setExportando] = useState(false)
 
-  const planillasAnio = FAKE_PLANILLAS[anio] ?? {}
+  // ── Cargar turnos publicados del año/hospital/sector ──
+  useEffect(() => {
+    async function cargar() {
+      if (!filtroHospital || !filtroSector) {
+        setStatsPorMes({})
+        return
+      }
+      setCargando(true)
 
-  function handleEditar(anio, mes) {
-    // TODO: navegar al editor cargando la planilla del mes/año
-    navigate('/jefe')
+      const { data, error } = await supabase
+        .from('historial_resumen')
+        .select('mes, enfermeros, turnos')
+        .eq('hospital_id', Number(filtroHospital))
+        .eq('sector_id', Number(filtroSector))
+        .eq('anio', anio)
+
+      if (error) {
+        console.error('[Historial] error Supabase:', error)
+        setStatsPorMes({})
+      } else if (data) {
+        // La vista ya nos devuelve los datos agrupados por mes
+        const stats = {}
+        for (const row of data) {
+          stats[row.mes] = { enfermeros: row.enfermeros, turnos: row.turnos }
+        }
+        setStatsPorMes(stats)
+      }
+      setCargando(false)
+    }
+    cargar()
+  }, [filtroHospital, filtroSector, anio])
+
+  // ── Editar: navega a /jefe precargando el contexto por URL ──
+  // La seguridad real la aplica Supabase RLS en el backend
+  function handleEditar(mesIndice, anio) {
+    const params = new URLSearchParams({
+      mes: mesIndice,           // 0-indexado como mesPlanificacion en Jefe.jsx
+      anio,
+      hospital: filtroHospital,
+      sector: filtroSector,
+    })
+    navigate(`/jefe?${params.toString()}`)
   }
 
-  async function handleExportar(anio, mes) {
+  // ── Exportar a PDF directamente desde Historial ──
+  async function handleExportarPDF(mesIndice, anio) {
     setExportando(true)
     try {
-      // TODO: reemplazar con fetch real de Supabase para obtener los turnos del mes
-      // const { data } = await supabase
-      //   .from('planillas')
-      //   .select('enfermeros, semana, turnos_asignados')
-      //   .eq('anio', anio).eq('mes', mes).single()
-      // exportarPlanillaPDF({ enfermeros: data.enfermeros, semana: data.semana, turnosAsignados: data.turnos_asignados })
+      const primerDia = new Date(anio, mesIndice, 1)
+      const ultimoDia = new Date(anio, mesIndice + 1, 0)
 
-      // Por ahora genera un PDF de demo con los datos disponibles
-      const primerDia = new Date(anio, mes, 1)
-      const semanaDemo = Array.from({ length: 7 }, (_, i) => {
-        const fecha = new Date(primerDia)
-        fecha.setDate(1 + i)
+      const { data: publicados, error } = await supabase
+        .from('turnos_asignados')
+        .select('enfermero_id, fecha, tipos_turno(cod, descripcion)')
+        .eq('hospital_id', Number(filtroHospital))
+        .eq('sector_id', Number(filtroSector))
+        .gte('fecha', primerDia.toISOString().split('T')[0])
+        .lte('fecha', ultimoDia.toISOString().split('T')[0])
+
+      if (error) throw error
+
+      const turnosFormat = {}
+      if (publicados?.length) {
+        for (const row of publicados) {
+          const cod = row.tipos_turno?.cod ?? ''
+          if (!cod) continue
+          const celdaId = `${row.enfermero_id}|${row.fecha}`
+          if (!turnosFormat[celdaId]) turnosFormat[celdaId] = []
+          turnosFormat[celdaId].push({ tipo_id: cod })
+        }
+      }
+
+      const enfermerosFiltrados = enfermeros.filter(e => {
+        return e.trabaja_en?.some(c => {
+          const hId = c.hospitales?.id?.toString() ?? ''
+          const sId = c.sectores?.id?.toString() ?? ''
+          const matchH = filtroHospital === '' || hId === filtroHospital
+          const matchS = filtroSector === '' || sId === filtroSector
+          return matchH && matchS
+        })
+      })
+
+      const diasDelMes = Array.from({ length: ultimoDia.getDate() }, (_, i) => {
+        const fecha = new Date(anio, mesIndice, i + 1)
         return {
-          id: fecha.toISOString().split('T')[0],
-          nombre: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][i],
-          numero: fecha.getDate(),
+          id: `${anio}-${String(mesIndice + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`,
+          nombre: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][fecha.getDay()],
+          numero: i + 1
         }
       })
 
       exportarPlanillaPDF({
-        enfermeros: [],           // reemplazar con datos reales
-        semana: semanaDemo,
-        turnosAsignados: {},      // reemplazar con datos reales
-        titulo: `Planilla ${MESES[mes]} ${anio}`,
+        enfermeros: enfermerosFiltrados,
+        dias: diasDelMes,
+        turnosAsignados: turnosFormat,
+        titulo: `Planilla Mensual - ${MESES[mesIndice]} ${anio}`
       })
+
+    } catch (err) {
+      console.error('[Exportar PDF]', err)
+      alert("No se pudo generar el PDF de este mes.")
     } finally {
       setExportando(false)
     }
@@ -217,6 +249,7 @@ export default function HistorialPlanillas() {
 
   return (
     <div className="min-h-screen bg-marca-bg p-4 lg:p-8">
+      {exportando && <ModalExportando />}
       <div className="max-w-4xl mx-auto">
 
         {/* Botón volver */}
@@ -227,7 +260,7 @@ export default function HistorialPlanillas() {
                      px-3 py-1.5 mb-6 hover:text-marca-light
                      hover:border-marca-base transition-colors"
         >
-          {<ArrowLeft />}
+          <ArrowLeft size={15} />
           Volver al editor
         </button>
 
@@ -237,8 +270,37 @@ export default function HistorialPlanillas() {
             Historial de planillas
           </h1>
           <p className="text-sm text-marca-muted">
-            Planillas publicadas — solo lectura para meses futuros
+            Planillas publicadas · seleccioná hospital y sector para ver el historial
           </p>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <select
+            value={filtroHospital}
+            onChange={e => setFiltroHospital(e.target.value)}
+            className="flex-1 min-w-[150px] px-3 py-2 rounded-xl text-sm font-medium
+                       bg-marca-surface border border-marca-border2 text-marca-muted
+                       outline-none cursor-pointer hover:border-marca-base transition-colors"
+          >
+            <option value="">Hospital</option>
+            {hospitales.map(h => (
+              <option key={h.id} value={h.id}>{h.nombre}</option>
+            ))}
+          </select>
+
+          <select
+            value={filtroSector}
+            onChange={e => setFiltroSector(e.target.value)}
+            className="flex-1 min-w-[150px] px-3 py-2 rounded-xl text-sm font-medium
+                       bg-marca-surface border border-marca-border2 text-marca-muted
+                       outline-none cursor-pointer hover:border-marca-base transition-colors"
+          >
+            <option value="">Sector / Sala</option>
+            {sectores.map(s => (
+              <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+          </select>
         </div>
 
         {/* Selector de año */}
@@ -248,7 +310,7 @@ export default function HistorialPlanillas() {
             className="p-2 rounded-lg border border-marca-border2 text-marca-muted
                        hover:text-marca-light hover:border-marca-base transition-colors"
           >
-            {<ChevronLeft />}
+            <ChevronLeft size={18} />
           </button>
           <span className="text-xl font-semibold text-marca-pale w-16 text-center tabular-nums">
             {anio}
@@ -260,39 +322,43 @@ export default function HistorialPlanillas() {
                        hover:text-marca-light hover:border-marca-base transition-colors
                        disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {<ChevronRight />}
+            <ChevronRight size={18} />
           </button>
         </div>
 
-        {/* Grilla de 12 meses */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {MESES.map((mes, i) => {
-            const esFuturo = anio === anioActual
-              ? i > mesActual
-              : anio > anioActual
+        {/* Contenido */}
+        {!filtroHospital || !filtroSector ? (
+          <div className="py-16 text-center text-sm text-marca-muted2">
+            Seleccioná un hospital y un sector para ver el historial.
+          </div>
+        ) : cargando ? (
+          <PantallaCarga mensaje="Cargando historial..." pantallaCompleta={false} />
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {MESES.map((mes, i) => {
+              const esFuturo = anio === anioActual ? i > mesActual : anio > anioActual
+              const esActual = anio === anioActual && i === mesActual
+              // i es 0-indexado → mes en BD es i+1 (1-indexado)
+              const stats = statsPorMes[i + 1] ?? null
 
-            const esActual = anio === anioActual && i === mesActual
-
-            return (
-              <TarjetaMes
-                key={i}
-                mes={mes}
-                indice={i}
-                anio={anio}
-                planilla={planillasAnio[i] ?? null}
-                esFuturo={esFuturo}
-                esActual={esActual}
-                onEditar={handleEditar}
-                onExportar={handleExportar}
-              />
-            )
-          })}
-        </div>
+              return (
+                <TarjetaMes
+                  key={i}
+                  mes={mes}
+                  indice={i}
+                  anio={anio}
+                  stats={stats}
+                  esFuturo={esFuturo}
+                  esActual={esActual}
+                  onEditar={handleEditar}
+                  onExportarPDF={handleExportarPDF}
+                />
+              )
+            })}
+          </div>
+        )}
 
       </div>
-
-      {exportando && <ModalExportando />}
-
     </div>
   )
 }

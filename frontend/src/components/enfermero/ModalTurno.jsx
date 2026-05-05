@@ -18,27 +18,14 @@ const estilosTurno = {
     LI: 'bg-yellow-950 text-yellow-300 border-yellow-800',
 }
 
-// Datos fake hasta conectar Supabase
-// La estructura real vendrá de: turnos_asignados JOIN trabaja_en JOIN hospitales
-const turnosFake = [
-    { tipo: 'TM', hospital: 'Hospital Italiano', sector: 'UCI' },
-    { tipo: 'TT', hospital: 'Hospital Alemán', sector: 'Guardia' },
-]
 
-export function ModalTurno({ fecha, onCerrar }) {
+export function ModalTurno({ fecha, turnosDia = [], onCerrar }) {
 
     const fechaDate = new Date(fecha + 'T12:00:00')
     const etiqueta = fechaDate.toLocaleDateString('es-AR', {
         weekday: 'long', day: 'numeric', month: 'long'
     })
 
-    // TODO: reemplazar por query real
-    // const turnos = await supabase
-    //   .from('turnos_asignados')
-    //   .select('tipo_turno_id, trabaja_en(hospitales(nombre), sectores(nombre))')
-    //   .eq('enfermero_id', session.user.id)
-    //   .eq('fecha', fecha)
-    const turnos = turnosFake
 
     return (
         <AnimatePresence>
@@ -81,24 +68,35 @@ export function ModalTurno({ fecha, onCerrar }) {
                     </button>
                 </div>
 
-                {/* Lista de turnos */}
                 <div className="flex flex-col gap-3">
-                    {turnos.map((turno, i) => (
-                        <div
-                            key={i}
-                            className={`rounded-xl border p-4 flex flex-col gap-1 ${estilosTurno[turno.tipo]}`}
-                        >
-                            <p className="text-sm font-medium">
-                                {nombresTurno[turno.tipo]}
-                            </p>
-                            <p className="text-xs opacity-70">
-                                {turno.hospital}
-                            </p>
-                            <p className="text-xs opacity-50">
-                                Sector: {turno.sector}
-                            </p>
-                        </div>
-                    ))}
+                    {turnosDia.length === 0 && (
+                        <p className="text-sm text-marca-muted text-center py-2">Sin turnos para este día.</p>
+                    )}
+                    {turnosDia.map((turno, i) => {
+                        const cod     = turno.tipos_turno?.cod ?? ''
+                        const horario = turno.tipos_turno
+                            ? `${turno.tipos_turno.hora_inicio ?? ''} – ${turno.tipos_turno.hora_fin ?? ''}`.trim()
+                            : ''
+                        return (
+                            <div
+                                key={i}
+                                className={`rounded-xl border p-4 flex flex-col gap-1 ${estilosTurno[cod] ?? ''}`}
+                            >
+                                <p className="text-sm font-medium">
+                                    {nombresTurno[cod] ?? cod}
+                                </p>
+                                {horario && (
+                                    <p className="text-xs opacity-70">{horario}</p>
+                                )}
+                                <p className="text-xs opacity-70">
+                                    {turno.hospitales?.nombre ?? '—'}
+                                </p>
+                                <p className="text-xs opacity-50">
+                                    Sector: {turno.sectores?.nombre ?? '—'}
+                                </p>
+                            </div>
+                        )
+                    })}
                 </div>
 
                 {/* Botón cerrar */}

@@ -17,7 +17,9 @@ function RutaProtegida({ children, rolRequerido }) {
   const { session, rol, cargando } = useAuth()
   if (cargando) return <PantallaCarga mensaje="Verificando sesión..." />;
   if (!session) return <Navigate to="/login" />
-  if (rol !== rolRequerido) return <Navigate to="/login" />
+  
+  // El admin tiene acceso global, bypass de la validación
+  if (rol !== rolRequerido && rol !== 'admin') return <Navigate to="/login" />
 
   return children
 }

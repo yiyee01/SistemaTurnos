@@ -18,13 +18,13 @@ export function FilaEnfermero({
         <div className="flex hover:bg-marca-surface2 transition-colors">
 
             {/* Nombre — sticky con el padre */}
-            <div className="w-32 shrink-0 p-3 flex flex-col justify-center
+            <div className="w-40 shrink-0 p-3 flex flex-col justify-center
                       border-r border-marca-border
                       sticky left-0 bg-marca-bg z-10
                       hover:bg-marca-surface2 transition-colors">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 overflow-hidden">
                     <p className="text-sm font-medium text-marca-pale truncate">
-                        {enfermero.nombre}
+                        {enfermero.nombre} {enfermero.apellido}
                     </p>
                     {!cumpleFrancos && (
                         <span title="Faltan francos obligatorios" 
@@ -34,6 +34,11 @@ export function FilaEnfermero({
                         </span>
                     )}
                 </div>
+                {enfermero.matricula && (
+                    <p className="text-[10px] text-marca-muted2 truncate mt-0.5">
+                        Mat: {enfermero.matricula}
+                    </p>
+                )}
                 {superaLimite ? (
                     <span className="text-xs text-amber-400 font-medium mt-0.5">
                         ⚠ {horasSemanales}h

@@ -115,18 +115,21 @@ export type Database = {
       }
       hospitales: {
         Row: {
+          activo: boolean | null
           direccion: string | null
           id: number
           nombre: string
           provincia_id: number | null
         }
         Insert: {
+          activo?: boolean | null
           direccion?: string | null
           id?: number
           nombre: string
           provincia_id?: number | null
         }
         Update: {
+          activo?: boolean | null
           direccion?: string | null
           id?: number
           nombre?: string
@@ -159,14 +162,17 @@ export type Database = {
       }
       sectores: {
         Row: {
+          activo: boolean | null
           id: number
           nombre: string
         }
         Insert: {
+          activo?: boolean | null
           id?: number
           nombre: string
         }
         Update: {
+          activo?: boolean | null
           id?: number
           nombre?: string
         }
@@ -200,25 +206,31 @@ export type Database = {
         Row: {
           activo: boolean | null
           enfermero_id: string
+          fecha_fin: string | null
           fecha_inicio: string | null
           hospital_id: number
           id: number
+          id_jefe: string | null
           sector_id: number | null
         }
         Insert: {
           activo?: boolean | null
           enfermero_id: string
+          fecha_fin?: string | null
           fecha_inicio?: string | null
           hospital_id: number
           id?: number
+          id_jefe?: string | null
           sector_id?: number | null
         }
         Update: {
           activo?: boolean | null
           enfermero_id?: string
+          fecha_fin?: string | null
           fecha_inicio?: string | null
           hospital_id?: number
           id?: number
+          id_jefe?: string | null
           sector_id?: number | null
         }
         Relationships: [
@@ -234,6 +246,13 @@ export type Database = {
             columns: ["hospital_id"]
             isOneToOne: false
             referencedRelation: "hospitales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trabaja_en_id_jefe_fkey"
+            columns: ["id_jefe"]
+            isOneToOne: false
+            referencedRelation: "enfermeros"
             referencedColumns: ["id"]
           },
           {
@@ -313,7 +332,32 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      historial_resumen: {
+        Row: {
+          anio: number | null
+          enfermeros: number | null
+          hospital_id: number | null
+          mes: number | null
+          sector_id: number | null
+          turnos: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_asignados_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_asignados_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "sectores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       guardar_borrador: {
@@ -334,6 +378,14 @@ export type Database = {
           p_mes: number
           p_sector_id: number
           p_turnos: Json
+        }
+        Returns: undefined
+      }
+      toggle_baja_contrato: {
+        Args: {
+          p_enfermero_id: string
+          p_jefe_id: string
+          p_nuevo_estado: boolean
         }
         Returns: undefined
       }

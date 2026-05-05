@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DragDropContext } from '@hello-pangea/dnd'
 import { useAuth } from '../hooks/useAuth'
-import { useEquipo } from '../hooks/useEquipo' //uso la misma funcion que para equipo, si me traigo todo el equipo a cargo de un jefe
+import { useEquipo } from '../hooks/useEquipo'
 import { TablaTurnos } from '../components/jefe/TablaTurnos'
 import { BancoFichas } from '../components/jefe/BancoFichas'
 import { HeaderJefe } from '../components/jefe/HeaderJefe'
@@ -13,6 +13,7 @@ import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
 import { Loader2 } from 'lucide-react'
 import { PantallaCarga } from '../components/PantallaCarga'
 import { useGuardar } from '../hooks/useGuardar'
+import { supabase } from '../supabase/client'
 
 const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 
@@ -41,11 +42,25 @@ const generarSemana = (lunes) =>
     }
   })
 
+const MESES_NOMBRE = [
+  'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+]
+
+const COLORES_TURNO = {
+  TM: { nombre: 'Mañana (06-14)',   color: 'bg-blue-200 text-blue-900 border-blue-400' },
+  TT: { nombre: 'Tarde (14-22)',    color: 'bg-orange-200 text-orange-900 border-orange-400' },
+  TN: { nombre: 'Noche (22-06)',    color: 'bg-purple-200 text-purple-900 border-purple-400' },
+  FR: { nombre: 'Franco',           color: 'bg-gray-300 text-gray-700 border-gray-500' },
+  LM: { nombre: 'Lic. Maternidad', color: 'bg-pink-200 text-pink-900 border-pink-400' },
+  LI: { nombre: 'Licencia',        color: 'bg-yellow-200 text-yellow-900 border-yellow-400' },
+}
+
 export default function Jefe() {
   const navigate = useNavigate()
-  const { session, cerrarSesion } = useAuth()
+  const [searchParams] = useSearchParams()
+  const { session, cerrarSesion, nombre } = useAuth()
 
-  // Usamos useEquipo que ya carga todo: enfermeros, sus lugares de trabajo, hospitales y sectores
   const { enfermeros, hospitales, sectores, cargando } = useEquipo(session?.user?.id)
   const [lunesBase, setLunesBase] = useState(() => getLunes(new Date()))
   const semanaActual = generarSemana(lunesBase)
@@ -55,15 +70,115 @@ export default function Jefe() {
   const [exportando, setExportando] = useState(false)
   const { guardarBorrador, guardarPlanificacion } = useGuardar()
 
-  const [filtroHospital, setFiltroHospital] = useState('')
-  const [filtroSector, setFiltroSector] = useState('')
+  const [filtroHospital, setFiltroHospital] = useState(() => searchParams.get('hospital') ?? '')
+  const [filtroSector, setFiltroSector]   = useState(() => searchParams.get('sector')   ?? '')
+
+  // true cuando se llega desde el Historial con URL params → carga desde turnos_asignados
+  // false en navegación normal → carga solo desde borradores
+  const [fromHistorial, setFromHistorial] = useState(() => {
+    return Boolean(
+      searchParams.get('mes') &&
+      searchParams.get('anio') &&
+      searchParams.get('hospital') &&
+      searchParams.get('sector')
+    )
+  })
+
+
+  const saludo = (() => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Buenos días'
+    if (h < 19) return 'Buenas tardes'
+    return 'Buenas noches'
+  })()
+
+  // Mes/año que se está planificando (fuente de verdad para guardar y cargar)
+  // Si viene de la URL (desde Historial → Editar), usamos esos valores
+  const hoy = new Date()
+  const [mesPlanificacion, setMesPlanificacion] = useState(() => {
+    const m = searchParams.get('mes')
+    return m !== null ? Number(m) : hoy.getMonth()
+  })
+  const [anioPlanificacion, setAnioPlanificacion] = useState(() => {
+    const a = searchParams.get('anio')
+    return a !== null ? Number(a) : hoy.getFullYear()
+  })
+
+  // Cuando el usuario cambia mes/año manualmente deja de ser "vista del historial"
+  const irAMes = (mes, anio) => {
+    setFromHistorial(false)
+    setMesPlanificacion(mes)
+    setAnioPlanificacion(anio)
+    const primerDia = new Date(anio, mes, 1)
+    setLunesBase(getLunes(primerDia))
+  }
+
+  // ── CARGAR DATOS (borrador o planilla publicada según el origen) ──
+  useEffect(() => {
+    async function cargar() {
+      if (!filtroHospital || !filtroSector) {
+        setTurnosAsignados({})
+        return
+      }
+
+      if (fromHistorial) {
+        // Origen: Historial → cargar desde turnos_asignados (planilla publicada)
+        const primerDia = new Date(anioPlanificacion, mesPlanificacion, 1)
+        const ultimoDia = new Date(anioPlanificacion, mesPlanificacion + 1, 0)
+        const { data: publicados } = await supabase
+          .from('turnos_asignados')
+          .select('enfermero_id, fecha, tipos_turno(cod, descripcion)')
+          .eq('hospital_id', Number(filtroHospital))
+          .eq('sector_id',   Number(filtroSector))
+          .gte('fecha', primerDia.toISOString().split('T')[0])
+          .lte('fecha', ultimoDia.toISOString().split('T')[0])
+
+        if (publicados?.length) {
+          const reconstruido = {}
+          for (const row of publicados) {
+            const cod  = row.tipos_turno?.cod ?? ''
+            const info = COLORES_TURNO[cod]
+            if (!info) continue
+            const celdaId = `${row.enfermero_id}|${row.fecha}`
+            if (!reconstruido[celdaId]) reconstruido[celdaId] = []
+            reconstruido[celdaId].push({
+              id_unico: crypto.randomUUID(),
+              tipo_id:  cod,
+              nombre:   info.nombre,
+              color:    info.color,
+            })
+          }
+          setTurnosAsignados(reconstruido)
+        } else {
+          setTurnosAsignados({})
+        }
+      } else {
+        // Origen: navegación normal → cargar solo el borrador
+        const { data: borrador } = await supabase
+          .from('borradores')
+          .select('estado_json')
+          .eq('id_hospital', filtroHospital)
+          .eq('id_sector',   filtroSector)
+          .eq('mes',         mesPlanificacion + 1)
+          .eq('anio',        anioPlanificacion)
+          .maybeSingle()
+
+        setTurnosAsignados(borrador?.estado_json ?? {})
+      }
+    }
+
+    cargar()
+  }, [filtroHospital, filtroSector, mesPlanificacion, anioPlanificacion, fromHistorial])
 
   // Filtramos la lista de enfermeros a planificar según las selecciones
   const enfermerosAplanificar = enfermeros.filter(e => {
-    const hId = e.trabaja_en?.[0]?.hospitales?.id?.toString() ?? ''
-    const sId = e.trabaja_en?.[0]?.sectores?.id?.toString() ?? ''
-    return (filtroHospital === '' || hId === filtroHospital) &&
-      (filtroSector === '' || sId === filtroSector)
+    return e.trabaja_en?.some(c => {
+      const hId = c.hospitales?.id?.toString() ?? ''
+      const sId = c.sectores?.id?.toString() ?? ''
+      const matchHospital = filtroHospital === '' || hId === filtroHospital
+      const matchSector = filtroSector === '' || sId === filtroSector
+      return matchHospital && matchSector && c.activo === true
+    })
   })
 
   // Navegar entre semanas
@@ -252,21 +367,51 @@ export default function Jefe() {
   async function ejecutarGuardado() {
     const hospitalId = filtroHospital ? Number(filtroHospital) : 0
     const sectorId = filtroSector ? Number(filtroSector) : 0
-    if (modalGuardar === 'borrador')
-      return await guardarBorrador(turnosAsignados, sectorId, lunesBase, hospitalId)
-    if (modalGuardar === 'planificacion')
-      return await guardarPlanificacion(turnosAsignados, sectorId, lunesBase, hospitalId)
+    
+    if (!hospitalId || !sectorId) {
+      mostrarToast("Debe seleccionar un Hospital y un Sector antes de guardar.")
+      return { ok: false }
+    }
+
+    // Usamos la fecha explícita del mes planificado, no lunesBase
+    // (el día 15 evita cualquier desfase de zona horaria o semana partida)
+    const fechaMes = new Date(anioPlanificacion, mesPlanificacion, 15)
+
+    let resultado;
+    if (modalGuardar === 'borrador') {
+      resultado = await guardarBorrador(turnosAsignados, sectorId, fechaMes, hospitalId)
+    } else if (modalGuardar === 'planificacion') {
+      resultado = await guardarPlanificacion(turnosAsignados, sectorId, fechaMes, hospitalId)
+    }
+
+    if (resultado && !resultado.ok) {
+      mostrarToast(resultado.error || "Error al guardar. Por favor, intentá nuevamente.")
+    }
+
+    return resultado;
   }
 
 
   async function handleExportarPDF() {
     setExportando(true)
     try {
+      const diasDelMes = Array.from(
+        { length: new Date(anioPlanificacion, mesPlanificacion + 1, 0).getDate() },
+        (_, i) => {
+          const fecha = new Date(anioPlanificacion, mesPlanificacion, i + 1)
+          return {
+            id: `${anioPlanificacion}-${String(mesPlanificacion+1).padStart(2, '0')}-${String(i+1).padStart(2, '0')}`,
+            nombre: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][fecha.getDay()],
+            numero: i + 1
+          }
+        }
+      )
+
       exportarPlanillaPDF({
-        enfermeros,
-        semana: semanaActual,
+        enfermeros: enfermerosAplanificar,
+        dias: diasDelMes,
         turnosAsignados,
-        limiteHoras,
+        titulo: `Planilla Mensual - ${MESES_NOMBRE[mesPlanificacion]} ${anioPlanificacion}`,
       })
     } finally {
       setExportando(false)
@@ -290,36 +435,85 @@ export default function Jefe() {
           onHistorial={() => navigate('/jefe/historial')}
         />
 
-        {/* Filtros de Planificación */}
-        <div className="flex gap-2 lg:gap-4 mb-4 mt-2">
-          <select
-            value={filtroHospital}
-            onChange={e => setFiltroHospital(e.target.value)}
-            className="w-full lg:w-48 px-3 py-2.5 rounded-xl text-sm font-medium bg-marca-surface
-                         border border-marca-border2 text-marca-muted
-                         outline-none cursor-pointer hover:border-marca-base transition-colors"
-          >
-            <option value="">Hospital</option>
-            {hospitales.map(h => (
-              <option key={h.id} value={h.id}>{h.nombre}</option>
-            ))}
-          </select>
+        {/* Barra de contexto: saludo + filtros */}
+        <div className="mb-4 mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
 
-          <select
-            value={filtroSector}
-            onChange={e => setFiltroSector(e.target.value)}
-            className="w-full lg:w-48 px-3 py-2.5 rounded-xl text-sm font-medium bg-marca-surface
-                         border border-marca-border2 text-marca-muted
-                         outline-none cursor-pointer hover:border-marca-base transition-colors"
-          >
-            <option value="">Sector / Sala</option>
-            {sectores.map(s => (
-              <option key={s.id} value={s.id}>{s.nombre}</option>
-            ))}
-          </select>
+          {/* Izquierda — Saludo */}
+          <div>
+            <p className="text-xl font-semibold text-marca-pale leading-tight">
+              {saludo}{nombre ? `, ${nombre}` : ''}
+            </p>
+            <p className="text-xs text-marca-muted mt-0.5">
+              {MESES_NOMBRE[mesPlanificacion]} {anioPlanificacion}
+            </p>
+          </div>
+
+          {/* Derecha — Filtros */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-widest text-marca-muted font-medium">
+              Indicá dónde vas a planificar
+            </p>
+            <div className="flex flex-wrap gap-2">
+
+              {/* Hospital */}
+              <select
+                value={filtroHospital}
+                onChange={e => { setFromHistorial(false); setFiltroHospital(e.target.value) }}
+                className="flex-1 min-w-[130px] px-3 py-2 rounded-xl text-sm font-medium bg-marca-surface
+                           border border-marca-border2 text-marca-muted
+                           outline-none cursor-pointer hover:border-marca-base transition-colors"
+              >
+                <option value="">Hospital</option>
+                {hospitales.map(h => (
+                  <option key={h.id} value={h.id}>{h.nombre}</option>
+                ))}
+              </select>
+
+              {/* Sector */}
+              <select
+                value={filtroSector}
+                onChange={e => { setFromHistorial(false); setFiltroSector(e.target.value) }}
+                className="flex-1 min-w-[130px] px-3 py-2 rounded-xl text-sm font-medium bg-marca-surface
+                           border border-marca-border2 text-marca-muted
+                           outline-none cursor-pointer hover:border-marca-base transition-colors"
+              >
+                <option value="">Sector / Sala</option>
+                {sectores.map(s => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+
+              {/* Mes */}
+              <select
+                value={mesPlanificacion}
+                onChange={e => irAMes(Number(e.target.value), anioPlanificacion)}
+                className="flex-1 min-w-[110px] px-3 py-2 rounded-xl text-sm font-medium bg-marca-surface
+                           border border-marca-border2 text-marca-muted
+                           outline-none cursor-pointer hover:border-marca-base transition-colors"
+              >
+                {MESES_NOMBRE.map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+
+              {/* Año */}
+              <select
+                value={anioPlanificacion}
+                onChange={e => irAMes(mesPlanificacion, Number(e.target.value))}
+                className="w-[90px] px-3 py-2 rounded-xl text-sm font-medium bg-marca-surface
+                           border border-marca-border2 text-marca-muted
+                           outline-none cursor-pointer hover:border-marca-base transition-colors"
+              >
+                {[anioPlanificacion - 1, anioPlanificacion, anioPlanificacion + 1].map(a => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+
+            </div>
+          </div>
         </div>
 
-        <BancoFichas />
+      <BancoFichas />
 
         {cargando ? (
           <PantallaCarga mensaje="Cargando datos..." pantallaCompleta={false} />

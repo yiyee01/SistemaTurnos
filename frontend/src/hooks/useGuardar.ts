@@ -1,76 +1,69 @@
 import { useState } from "react";
 import { supabase } from "../supabase/client";
-import type { Database } from "../supabase/database.types";
-
-// ── Tipos ──────────────────────────────────────────────────
-export type Borrador = Database['public']['Tables']['borradores']['Insert'];
 
 type ResultadoGuardado = { ok: boolean; error?: string }
 
-// ── Hook ───────────────────────────────────────────────────
 export function useGuardar() {
     const [guardando, setGuardando] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    async function guardarBorrador(
-        turnosAsignados: Record<string, any[]>,
-        sectorId: number,
-        lunesBase: Date,
-        hospitalId: number
-    ): Promise<ResultadoGuardado> {
+    async function invocarEdgeFunction(payload: object): Promise<ResultadoGuardado> {
         setGuardando(true);
-        setError(null);
         try {
-            const payload = {
-                mes: lunesBase.getMonth() + 1,
-                anio: lunesBase.getFullYear(),
-                modo: 'borrador' as const,
-                id_sector: sectorId,
-                id_hospital: hospitalId,
-                estado_json: turnosAsignados,
-            };
             const { data, error: fnErr } = await supabase.functions.invoke('guardar-planificacion', { body: payload });
-            if (fnErr) { setError(fnErr.message); return { ok: false, error: fnErr.message }; }
-            if (data?.error) { setError(data.error); return { ok: false, error: data.error }; }
+
+            // Error de red / función no encontrada / error HTTP
+            if (fnErr) {
+                console.error('[useGuardar] edge function error:', fnErr);
+                return { ok: false, error: fnErr.message };
+            }
+
+            // La edge function devuelve { error: '...' } cuando algo falla internamente
+            if (data?.error) {
+                console.error('[useGuardar] error desde edge function:', data.error);
+                return { ok: false, error: data.error };
+            }
+
             return { ok: true };
         } catch (e: any) {
             const msg = e.message ?? 'Error inesperado.';
-            setError(msg);
+            console.error('[useGuardar] catch:', msg);
             return { ok: false, error: msg };
         } finally {
             setGuardando(false);
         }
     }
 
-    async function guardarPlanificacion(
+    function guardarBorrador(
         turnosAsignados: Record<string, any[]>,
         sectorId: number,
-        lunesBase: Date,
+        fechaMes: Date,
         hospitalId: number
     ): Promise<ResultadoGuardado> {
-        setGuardando(true);
-        setError(null);
-        try {
-            const payload = {
-                mes: lunesBase.getMonth() + 1,
-                anio: lunesBase.getFullYear(),
-                modo: 'planificacion' as const,
-                id_sector: sectorId,
-                id_hospital: hospitalId,
-                estado_json: turnosAsignados,
-            };
-            const { data, error: fnErr } = await supabase.functions.invoke('guardar-planificacion', { body: payload });
-            if (fnErr) { setError(fnErr.message); return { ok: false, error: fnErr.message }; }
-            if (data?.error) { setError(data.error); return { ok: false, error: data.error }; }
-            return { ok: true };
-        } catch (e: any) {
-            const msg = e.message ?? 'Error inesperado.';
-            setError(msg);
-            return { ok: false, error: msg };
-        } finally {
-            setGuardando(false);
-        }
+        return invocarEdgeFunction({
+            mes:        fechaMes.getMonth() + 1,
+            anio:       fechaMes.getFullYear(),
+            modo:       'borrador',
+            id_sector:  sectorId,
+            id_hospital: hospitalId,
+            estado_json: turnosAsignados,
+        });
     }
 
-    return { guardarBorrador, guardarPlanificacion, guardando, error };
+    function guardarPlanificacion(
+        turnosAsignados: Record<string, any[]>,
+        sectorId: number,
+        fechaMes: Date,
+        hospitalId: number
+    ): Promise<ResultadoGuardado> {
+        return invocarEdgeFunction({
+            mes:        fechaMes.getMonth() + 1,
+            anio:       fechaMes.getFullYear(),
+            modo:       'planificacion',
+            id_sector:  sectorId,
+            id_hospital: hospitalId,
+            estado_json: turnosAsignados,
+        });
+    }
+
+    return { guardarBorrador, guardarPlanificacion, guardando };
 }

@@ -58,9 +58,9 @@ export function ModalGuardar({
   const esBorrador = modo === 'borrador'
 
   // Color y datos según modo
-  const accentBg = esBorrador ? 'bg-marca-dark' : 'bg-emerald-950'
-  const accentBorde = esBorrador ? 'border-marca-mid' : 'border-emerald-700'
-  const accentColor = esBorrador ? 'text-marca-light' : 'text-emerald-300'
+  const accentBg = esBorrador ? 'bg-marca-muted' : 'bg-emerald-950'
+  const accentBorde = esBorrador ? 'border-marca-light' : 'border-emerald-700'
+  const accentColor = esBorrador ? 'text-marca-border' : 'text-emerald-300'
   const titulo = esBorrador ? 'Guardar borrador' : 'Guardar planificación'
   const descripcion = esBorrador
     ? 'Se guardará el estado actual de la planilla sin publicarla. Podrás seguir editando.'

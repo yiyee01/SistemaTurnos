@@ -1,5 +1,6 @@
 // src/components/jefe/CeldaTurno.jsx
 import { Droppable } from '@hello-pangea/dnd'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const estilosTurno = {
     TM: 'bg-blue-200 text-blue-900 border-blue-400',
@@ -28,20 +29,26 @@ export function CeldaTurno({ celdaId, turnos, onEliminar, onAbrirBottomSheet, bl
     }
 
     // ── CONTENIDO de la celda ──
-    const contenido = turnos.length > 0
-        ? turnos.map(turno => (
-            <div
-                key={turno.id_unico}
-                onDoubleClick={(e) => { e.stopPropagation(); onEliminar(celdaId, turno.id_unico) }}
-                className={`text-xs p-1.5 rounded border font-medium text-center
-                      cursor-pointer transition-all
-                      hover:brightness-90 ${estilosTurno[turno.tipo_id] ?? 'bg-gray-200'}`}
-                title="Doble clic para eliminar"
-            >
-                {nombresTurno[turno.tipo_id] ?? turno.nombre}
-            </div>
-        ))
-        : null
+    const contenido = (
+        <AnimatePresence>
+            {turnos.map(turno => (
+                <motion.div
+                    key={turno.id_unico}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5, y: -10 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    onDoubleClick={(e) => { e.stopPropagation(); onEliminar(celdaId, turno.id_unico) }}
+                    className={`text-xs p-1.5 rounded border font-medium text-center
+                          cursor-pointer transition-colors shadow-sm
+                          hover:brightness-90 ${estilosTurno[turno.tipo_id] ?? 'bg-gray-200'}`}
+                    title="Doble clic para eliminar"
+                >
+                    {nombresTurno[turno.tipo_id] ?? turno.nombre}
+                </motion.div>
+            ))}
+        </AnimatePresence>
+    )
 
     // ── VISTA MÓVIL (<1024px): sin drag and drop ──
     const vistaMobile = (

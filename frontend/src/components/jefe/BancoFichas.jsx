@@ -1,5 +1,6 @@
 // src/components/jefe/BancoFichas.jsx
 import { Droppable, Draggable } from '@hello-pangea/dnd'
+import { motion } from 'framer-motion'
 
 const tiposTurno = [
     { id: 'TM', nombre: 'Mañana (06-14)', color: 'bg-blue-200 text-blue-900 border-blue-400' },
@@ -31,10 +32,16 @@ export function BancoFichas() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`px-4 py-2 rounded-lg border font-medium text-sm
-                            shadow-xl scale-105 ${turno.color}`}
                             >
-                                {turno.nombre}
+                                <motion.div
+                                    initial={{ scale: 0.8, rotate: -4 }}
+                                    animate={{ scale: 1.05, rotate: 0 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                    className={`px-4 py-2 rounded-lg border font-medium text-sm
+                                        shadow-2xl cursor-grabbing ${turno.color}`}
+                                >
+                                    {turno.nombre}
+                                </motion.div>
                             </div>
                         )
                     }}
@@ -52,11 +59,16 @@ export function BancoFichas() {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className={`px-4 py-2 rounded-lg border font-medium text-sm
-                                  cursor-grab transition-opacity ${turno.color}
-                                  ${snapshot.isDragging ? 'opacity-50' : 'opacity-100'}`}
+                                            className={`${snapshot.isDragging ? 'opacity-50' : 'opacity-100'}`}
                                         >
-                                            {turno.nombre}
+                                            <motion.div
+                                                whileHover={{ scale: 1.05, y: -2 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className={`px-4 py-2 rounded-lg border font-medium text-sm
+                                                    cursor-grab shadow-sm hover:shadow-md ${turno.color}`}
+                                            >
+                                                {turno.nombre}
+                                            </motion.div>
                                         </div>
                                     )}
                                 </Draggable>

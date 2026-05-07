@@ -9,7 +9,6 @@ import { BancoFichas } from '../components/jefe/BancoFichas'
 import { HeaderJefe } from '../components/jefe/HeaderJefe'
 import { BottomSheet } from '../components/jefe/BottomSheet'
 import { ModalGuardar } from '../components/jefe/ModalGuardar'
-import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
 import { Loader2 } from 'lucide-react'
 import { PantallaCarga } from '../components/PantallaCarga'
 import { useGuardar } from '../hooks/useGuardar'
@@ -43,17 +42,17 @@ const generarSemana = (lunes) =>
   })
 
 const MESES_NOMBRE = [
-  'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ]
 
 const COLORES_TURNO = {
-  TM: { nombre: 'Mañana (06-14)',   color: 'bg-blue-200 text-blue-900 border-blue-400' },
-  TT: { nombre: 'Tarde (14-22)',    color: 'bg-orange-200 text-orange-900 border-orange-400' },
-  TN: { nombre: 'Noche (22-06)',    color: 'bg-purple-200 text-purple-900 border-purple-400' },
-  FR: { nombre: 'Franco',           color: 'bg-gray-300 text-gray-700 border-gray-500' },
+  TM: { nombre: 'Mañana (06-14)', color: 'bg-blue-200 text-blue-900 border-blue-400' },
+  TT: { nombre: 'Tarde (14-22)', color: 'bg-orange-200 text-orange-900 border-orange-400' },
+  TN: { nombre: 'Noche (22-06)', color: 'bg-purple-200 text-purple-900 border-purple-400' },
+  FR: { nombre: 'Franco', color: 'bg-gray-300 text-gray-700 border-gray-500' },
   LM: { nombre: 'Lic. Maternidad', color: 'bg-pink-200 text-pink-900 border-pink-400' },
-  LI: { nombre: 'Licencia',        color: 'bg-yellow-200 text-yellow-900 border-yellow-400' },
+  LI: { nombre: 'Licencia', color: 'bg-yellow-200 text-yellow-900 border-yellow-400' },
 }
 
 export default function Jefe() {
@@ -71,7 +70,7 @@ export default function Jefe() {
   const { guardarBorrador, guardarPlanificacion } = useGuardar()
 
   const [filtroHospital, setFiltroHospital] = useState(() => searchParams.get('hospital') ?? '')
-  const [filtroSector, setFiltroSector]   = useState(() => searchParams.get('sector')   ?? '')
+  const [filtroSector, setFiltroSector] = useState(() => searchParams.get('sector') ?? '')
 
   // true cuando se llega desde el Historial con URL params → carga desde turnos_asignados
   // false en navegación normal → carga solo desde borradores
@@ -129,23 +128,23 @@ export default function Jefe() {
           .from('turnos_asignados')
           .select('enfermero_id, fecha, tipos_turno(cod, descripcion)')
           .eq('hospital_id', Number(filtroHospital))
-          .eq('sector_id',   Number(filtroSector))
+          .eq('sector_id', Number(filtroSector))
           .gte('fecha', primerDia.toISOString().split('T')[0])
           .lte('fecha', ultimoDia.toISOString().split('T')[0])
 
         if (publicados?.length) {
           const reconstruido = {}
           for (const row of publicados) {
-            const cod  = row.tipos_turno?.cod ?? ''
+            const cod = row.tipos_turno?.cod ?? ''
             const info = COLORES_TURNO[cod]
             if (!info) continue
             const celdaId = `${row.enfermero_id}|${row.fecha}`
             if (!reconstruido[celdaId]) reconstruido[celdaId] = []
             reconstruido[celdaId].push({
               id_unico: crypto.randomUUID(),
-              tipo_id:  cod,
-              nombre:   info.nombre,
-              color:    info.color,
+              tipo_id: cod,
+              nombre: info.nombre,
+              color: info.color,
             })
           }
           setTurnosAsignados(reconstruido)
@@ -158,9 +157,9 @@ export default function Jefe() {
           .from('borradores')
           .select('estado_json')
           .eq('id_hospital', filtroHospital)
-          .eq('id_sector',   filtroSector)
-          .eq('mes',         mesPlanificacion + 1)
-          .eq('anio',        anioPlanificacion)
+          .eq('id_sector', filtroSector)
+          .eq('mes', mesPlanificacion + 1)
+          .eq('anio', anioPlanificacion)
           .maybeSingle()
 
         setTurnosAsignados(borrador?.estado_json ?? {})
@@ -367,7 +366,7 @@ export default function Jefe() {
   async function ejecutarGuardado() {
     const hospitalId = filtroHospital ? Number(filtroHospital) : 0
     const sectorId = filtroSector ? Number(filtroSector) : 0
-    
+
     if (!hospitalId || !sectorId) {
       mostrarToast("Debe seleccionar un Hospital y un Sector antes de guardar.")
       return { ok: false }
@@ -400,14 +399,15 @@ export default function Jefe() {
         (_, i) => {
           const fecha = new Date(anioPlanificacion, mesPlanificacion, i + 1)
           return {
-            id: `${anioPlanificacion}-${String(mesPlanificacion+1).padStart(2, '0')}-${String(i+1).padStart(2, '0')}`,
+            id: `${anioPlanificacion}-${String(mesPlanificacion + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`,
             nombre: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][fecha.getDay()],
             numero: i + 1
           }
         }
       )
 
-      exportarPlanillaPDF({
+      const { exportarPlanillaPDF } = await import('../utils/exportarPlanillaPDF')
+      await exportarPlanillaPDF({
         enfermeros: enfermerosAplanificar,
         dias: diasDelMes,
         turnosAsignados,
@@ -513,7 +513,7 @@ export default function Jefe() {
           </div>
         </div>
 
-      <BancoFichas />
+        <BancoFichas />
 
         {cargando ? (
           <PantallaCarga mensaje="Cargando datos..." pantallaCompleta={false} />

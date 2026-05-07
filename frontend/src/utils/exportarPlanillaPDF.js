@@ -1,6 +1,5 @@
 // src/utils/exportarPlanillaPDF.js
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+// jsPDF se carga de forma lazy (dynamic import) para no inflar el bundle principal
 
 /**
  * Genera y descarga un PDF con la planilla de turnos mensual/semanal.
@@ -11,7 +10,12 @@ import autoTable from 'jspdf-autotable'
  * @param {Object} params.turnosAsignados  - { 'enfermeroId|fecha': [{ tipo_id, nombre }] }
  * @param {string} [params.titulo]         - Título opcional del PDF
  */
-export function exportarPlanillaPDF({ enfermeros, dias, turnosAsignados, titulo }) {
+export async function exportarPlanillaPDF({ enfermeros, dias, turnosAsignados, titulo }) {
+  // Carga diferida: solo descarga estas librerías cuando el usuario pide el PDF
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
   // ── Configuración ─────────────────────────────────────
   const HORAS_TURNO = { TM: 8, TT: 8, TN: 8, FR: 0, LM: 0, LI: 0 }
 

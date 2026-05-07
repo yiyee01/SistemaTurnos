@@ -5,7 +5,6 @@ import { useAuth } from '../hooks/useAuth'
 import { useEquipo } from '../hooks/useEquipo'
 import { ArrowLeft, ChevronLeft, ChevronRight, Edit, Lock, Check, Loader2, Download } from 'lucide-react'
 import { PantallaCarga } from '../components/PantallaCarga'
-import { exportarPlanillaPDF } from '../utils/exportarPlanillaPDF'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -232,7 +231,8 @@ export default function HistorialPlanillas() {
         }
       })
 
-      exportarPlanillaPDF({
+      const { exportarPlanillaPDF } = await import('../utils/exportarPlanillaPDF')
+      await exportarPlanillaPDF({
         enfermeros: enfermerosFiltrados,
         dias: diasDelMes,
         turnosAsignados: turnosFormat,

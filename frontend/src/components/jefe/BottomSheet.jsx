@@ -1,4 +1,5 @@
 // src/components/jefe/BottomSheet.jsx
+import { useDragControls } from 'framer-motion'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const opcionesTurno = [
@@ -10,8 +11,12 @@ const opcionesTurno = [
     { id: 'LI', nombre: 'Licencia', color: 'bg-yellow-200 text-yellow-900 border-yellow-400' },
 ]
 
+const UMBRAL_CIERRE = 80
+
 export function BottomSheet({ celdaId, turnosActuales, onAsignar, onEliminar, onCerrar }) {
     const tieneTurno = turnosActuales?.length > 0
+    // dragControls le dice a Framer Motion desde dónde puede iniciarse el drag
+    const dragControls = useDragControls()
 
     return (
         <AnimatePresence>
@@ -28,17 +33,32 @@ export function BottomSheet({ celdaId, turnosActuales, onAsignar, onEliminar, on
 
                     {/* Panel desde abajo */}
                     <motion.div
+                        // Entrada / salida
                         initial={{ y: '100%' }}
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        // Drag controlado solo desde el handle
+                        drag="y"
+                        dragControls={dragControls}
+                        dragListener={false}          // el panel NO escucha drag por sí solo
+                        dragConstraints={{ top: 0 }}  // no puede subir
+                        dragElastic={{ top: 0, bottom: 0.4 }}
+                        onDragEnd={(_, info) => {
+                            if (info.offset.y > UMBRAL_CIERRE) onCerrar()
+                        }}
                         className="fixed bottom-0 left-0 right-0 z-50 lg:hidden
                                    bg-marca-surface border-t border-marca-border
                                    rounded-t-2xl p-5 flex flex-col gap-4"
                     >
 
-                        {/* Handle */}
-                        <div className="w-10 h-1 bg-marca-border2 rounded-full mx-auto" />
+                        {/* Handle — única zona que inicia el drag */}
+                        <div
+                            className="flex justify-center py-2 -mt-2 -mx-5 cursor-grab active:cursor-grabbing touch-none select-none"
+                            onPointerDown={(e) => dragControls.start(e)}
+                        >
+                            <div className="w-10 h-1 bg-marca-border2 rounded-full" />
+                        </div>
 
                         {/* Título */}
                         <p className="text-xs uppercase tracking-widest text-marca-muted font-medium text-center">

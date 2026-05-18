@@ -9,6 +9,9 @@ import { LogOut, UserRoundPen, UserRoundX, UserPlus, Search, Filter, X, ChevronL
 import { PantallaCarga } from '../components/PantallaCarga'
 import { ProcesandoOverlay } from '../components/ProcesandoOverlay'
 
+// 🔒 Modo prueba: oculta las acciones de crear/modificar/eliminar enfermero
+const MODO_PRUEBA = true
+
 export default function MiEquipo() {
   const navigate = useNavigate()
   const { session } = useAuth()
@@ -56,17 +59,19 @@ export default function MiEquipo() {
               <ChevronLeft size={16} />
               Volver
             </button>
-            <button
-              onClick={() => navigate('/jefe/equipo/nuevo')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                        text-marca-border 
-                        bg-marca-muted
-                        hover:text-marca-pale
-                        hover:bg-marca-dark transition-colors"
-            >
-              <UserPlus size={16} />
-              Nuevo enfermero
-            </button>
+            {!MODO_PRUEBA && (
+              <button
+                onClick={() => navigate('/jefe/equipo/nuevo')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                          text-marca-border 
+                          bg-marca-muted
+                          hover:text-marca-pale
+                          hover:bg-marca-dark transition-colors"
+              >
+                <UserPlus size={16} />
+                Nuevo enfermero
+              </button>
+            )}
 
           </div>
         </div>
@@ -171,27 +176,29 @@ export default function MiEquipo() {
                   </div>
 
                   {/* Acciones */}
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() => navigate(`/jefe/equipo/editar/${e.id}`)}
-                      title="Editar"
-                      className="p-2 rounded-lg border border-marca-border2
-                                 text-marca-muted hover:text-marca-light
-                                 hover:border-marca-base transition-all"
-                    >
-                      <UserRoundPen />
-                    </button>
-                    <button
-                      onClick={() => setEnfermeroaDarDeBaja(e)}
-                      title={activo ? 'Dar de baja' : 'Reactivar'}
-                      className={`p-2 rounded-lg border border-marca-border2 transition-all
-                                 ${activo 
-                                   ? 'text-marca-muted hover:text-red-400 hover:border-red-800' 
-                                   : 'text-marca-muted hover:text-green-400 hover:border-green-800'}`}
-                    >
-                      <UserRoundX />
-                    </button>
-                  </div>
+                  {!MODO_PRUEBA && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => navigate(`/jefe/equipo/editar/${e.id}`)}
+                        title="Editar"
+                        className="p-2 rounded-lg border border-marca-border2
+                                   text-marca-muted hover:text-marca-light
+                                   hover:border-marca-base transition-all"
+                      >
+                        <UserRoundPen />
+                      </button>
+                      <button
+                        onClick={() => setEnfermeroaDarDeBaja(e)}
+                        title={activo ? 'Dar de baja' : 'Reactivar'}
+                        className={`p-2 rounded-lg border border-marca-border2 transition-all
+                                   ${activo 
+                                     ? 'text-marca-muted hover:text-red-400 hover:border-red-800' 
+                                     : 'text-marca-muted hover:text-green-400 hover:border-green-800'}`}
+                      >
+                        <UserRoundX />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -254,27 +261,29 @@ export default function MiEquipo() {
                             {e.rol === 'jefe' ? 'Jefe' : 'Enfermero'}
                           </span>
                         </div>
-                        <div className="flex gap-2 justify-end items-center">
-                          <button
-                            onClick={() => navigate(`/jefe/equipo/editar/${e.id}`)}
-                            title="Editar"
-                            className="p-1.5 rounded-md border border-marca-border2
-                                     text-marca-muted hover:text-marca-light
-                                     hover:border-marca-base transition-all"
-                          >
-                            <UserRoundPen />
-                          </button>
-                          <button
-                            onClick={() => setEnfermeroaDarDeBaja(e)}
-                            title={activo ? 'Dar de baja' : 'Reactivar'}
-                            className={`p-1.5 rounded-md border border-marca-border2 transition-all
-                                       ${activo 
-                                         ? 'text-marca-muted hover:text-red-400 hover:border-red-800' 
-                                         : 'text-marca-muted hover:text-green-400 hover:border-green-800'}`}
-                          >
-                            <UserRoundX />
-                          </button>
-                        </div>
+                        {!MODO_PRUEBA ? (
+                          <div className="flex gap-2 justify-end items-center">
+                            <button
+                              onClick={() => navigate(`/jefe/equipo/editar/${e.id}`)}
+                              title="Editar"
+                              className="p-1.5 rounded-md border border-marca-border2
+                                       text-marca-muted hover:text-marca-light
+                                       hover:border-marca-base transition-all"
+                            >
+                              <UserRoundPen />
+                            </button>
+                            <button
+                              onClick={() => setEnfermeroaDarDeBaja(e)}
+                              title={activo ? 'Dar de baja' : 'Reactivar'}
+                              className={`p-1.5 rounded-md border border-marca-border2 transition-all
+                                         ${activo 
+                                           ? 'text-marca-muted hover:text-red-400 hover:border-red-800' 
+                                           : 'text-marca-muted hover:text-green-400 hover:border-green-800'}`}
+                            >
+                              <UserRoundX />
+                            </button>
+                          </div>
+                        ) : <div />}
                       </div>
                     )
                   })}

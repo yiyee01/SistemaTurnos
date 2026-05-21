@@ -368,7 +368,7 @@ export default function Jefe() {
     const sectorId = filtroSector ? Number(filtroSector) : 0
 
     if (!hospitalId || !sectorId) {
-      mostrarToast("Debe seleccionar un Hospital y un Sector antes de guardar.")
+      mostrarToast("Debe seleccionar un Negocio y un Sector antes de guardar.")
       return { ok: false }
     }
 
@@ -463,7 +463,7 @@ export default function Jefe() {
                            border border-marca-border2 text-marca-muted
                            outline-none cursor-pointer hover:border-marca-base transition-colors"
               >
-                <option value="">Hospital</option>
+                <option value="">Negocio</option>
                 {hospitales.map(h => (
                   <option key={h.id} value={h.id}>{h.nombre}</option>
                 ))}

@@ -25,7 +25,7 @@ export function TablaTurnos({
                           uppercase tracking-widest text-marca-muted
                           border-r border-marca-border
                           sticky left-0 bg-marca-surface2 z-10">
-                        Enfermero
+                        Empleado
                     </div>
 
                     {/* Días */}

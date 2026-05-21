@@ -60,7 +60,7 @@ export default function Enfermero() {
     <div className="min-h-screen bg-marca-bg p-4 md:p-8 scrollbar-marca">
 
       <HeaderEnfermero
-        nombre={nombre ?? session?.user?.email ?? 'Enfermero'}
+        nombre={nombre ?? session?.user?.email ?? 'Empleado'}
         onCerrarSesion={cerrarSesion}
       />
 

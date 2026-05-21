@@ -125,7 +125,7 @@ function SideDrawer({ onGuardar, onPublicar, onCerrarSesion, onMiEquipo, onHisto
                                            bg-marca-surface border border-marca-border2 text-marca-pale
                                            outline-none focus:border-marca-mid transition-colors"
                             />
-                            <span className="text-xs text-marca-muted">horas por enfermero</span>
+                            <span className="text-xs text-marca-muted">horas por empleado</span>
                         </div>
                     </div>
 

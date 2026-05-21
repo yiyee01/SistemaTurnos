@@ -47,7 +47,7 @@ export default function MiEquipo() {
         <div className="flex justify-between items-start gap-4 mb-6 flex-wrap">
           <div>
             <h1 className="text-2xl font-medium text-marca-pale mb-1">Mi equipo</h1>
-            <p className="text-sm text-marca-muted">Gestión de enfermeros</p>
+            <p className="text-sm text-marca-muted">Gestión de empleados</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -69,7 +69,7 @@ export default function MiEquipo() {
                           hover:bg-marca-dark transition-colors"
               >
                 <UserPlus size={16} />
-                Nuevo enfermero
+                Nuevo empleado
               </button>
             )}
 
@@ -100,7 +100,7 @@ export default function MiEquipo() {
                          border border-marca-border2 text-marca-muted
                          outline-none cursor-pointer"
             >
-              <option value="">Todos los hospitales</option>
+              <option value="">Todos los negocios</option>
               {hospitales.map(h => (
                 <option key={h.id} value={h.nombre}>{h.nombre}</option>
               ))}
@@ -141,7 +141,7 @@ export default function MiEquipo() {
           </div>
         ) : filtrados.length === 0 ? (
           <div className="py-10 text-center text-sm text-marca-muted2 lg:hidden">
-            No se encontraron enfermeros.
+            No se encontraron empleados.
           </div>
         ) : (
           <div className="flex flex-col gap-2 lg:hidden">
@@ -167,7 +167,7 @@ export default function MiEquipo() {
                           ? 'bg-marca-dark text-marca-light border border-marca-base'
                           : 'bg-marca-surface2 text-marca-muted border border-marca-border2'
                         }`}>
-                        {e.rol === 'jefe' ? 'Jefe' : 'Enfermero'}
+                        {e.rol === 'jefe' ? 'Jefe' : 'Empleado'}
                       </span>
                     </div>
                     <p className="text-xs text-marca-muted mt-0.5">
@@ -217,7 +217,7 @@ export default function MiEquipo() {
               {/* Cabecera */}
               <div className="grid border-b border-marca-border px-4 py-2.5"
                 style={{ gridTemplateColumns: '220px 100px 130px 100px 110px 1fr' }}>
-                {['Enfermero', 'Matrícula', 'Hospital', 'Sector', 'Rol', ''].map((h, i) => (
+                {['Empleado', 'Matrícula', 'Sucursal', 'Sector', 'Rol', ''].map((h, i) => (
                   <div key={i} className="text-xs font-medium uppercase tracking-widest text-marca-muted">
                     {h}
                   </div>
@@ -227,7 +227,7 @@ export default function MiEquipo() {
               {/* Filas */}
               {filtrados.length === 0 ? (
                 <div className="py-10 text-center text-sm text-marca-muted2">
-                  No se encontraron enfermeros.
+                  No se encontraron empleados.
                 </div>
               ) : (
                 <div className="divide-y divide-marca-border">
@@ -258,7 +258,7 @@ export default function MiEquipo() {
                               ? 'bg-marca-dark text-marca-light border border-marca-base'
                               : 'bg-marca-surface2 text-marca-muted border border-marca-border2'
                             }`}>
-                            {e.rol === 'jefe' ? 'Jefe' : 'Enfermero'}
+                            {e.rol === 'jefe' ? 'Jefe' : 'Empleado'}
                           </span>
                         </div>
                         {!MODO_PRUEBA ? (

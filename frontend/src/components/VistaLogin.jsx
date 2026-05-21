@@ -48,7 +48,7 @@ export function VistaLogin({ onSubmit, cargando, error }) {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="tu@hospital.com"
+              placeholder="tu@negocio.com"
               required
               className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-all
                          bg-marca-bg border border-marca-border2 text-marca-pale

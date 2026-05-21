@@ -42,7 +42,7 @@ export function ModalConfirmarBaja({ enfermero, onConfirmar, onCancelar }) {
             {/* Texto */}
             <div>
               <h2 className="text-base font-medium text-marca-pale mb-2">
-                ¿Dar de baja a este enfermero?
+                ¿Dar de baja a este empleado?
               </h2>
               <p className="text-sm text-marca-muted leading-relaxed">
                 Estás por dar de baja a{' '}

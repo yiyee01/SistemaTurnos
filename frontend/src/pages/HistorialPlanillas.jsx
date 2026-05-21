@@ -88,7 +88,7 @@ function TarjetaMes({ mes, indice, anio, stats, esFuturo, esActual, onEditar, on
       {/* Estadísticas reales */}
       <div className="flex-1">
         <p className="text-xs text-marca-muted">
-          {stats.enfermeros} enfermeros · {stats.turnos} turnos
+          {stats.enfermeros} empleados · {stats.turnos} turnos
         </p>
       </div>
 
@@ -270,7 +270,7 @@ export default function HistorialPlanillas() {
             Historial de planillas
           </h1>
           <p className="text-sm text-marca-muted">
-            Planillas publicadas · seleccioná hospital y sector para ver el historial
+            Planillas publicadas · seleccioná negocio y sector para ver el historial
           </p>
         </div>
 
@@ -283,7 +283,7 @@ export default function HistorialPlanillas() {
                        bg-marca-surface border border-marca-border2 text-marca-muted
                        outline-none cursor-pointer hover:border-marca-base transition-colors"
           >
-            <option value="">Hospital</option>
+            <option value="">Negocio</option>
             {hospitales.map(h => (
               <option key={h.id} value={h.id}>{h.nombre}</option>
             ))}
@@ -329,7 +329,7 @@ export default function HistorialPlanillas() {
         {/* Contenido */}
         {!filtroHospital || !filtroSector ? (
           <div className="py-16 text-center text-sm text-marca-muted2">
-            Seleccioná un hospital y un sector para ver el historial.
+            Seleccioná un negocio y un sector para ver el historial.
           </div>
         ) : cargando ? (
           <PantallaCarga mensaje="Cargando historial..." pantallaCompleta={false} />

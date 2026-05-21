@@ -17,7 +17,7 @@ export function PantallaCarga({ mensaje = 'Cargando...', pantallaCompleta = true
         <div className="flex items-center gap-2 mb-2">
           <Clock size={18} className="text-marca-base" strokeWidth={1.5} />
           <span className="text-sm font-semibold text-marca-base tracking-tight">
-            TurnosHosp
+            SisTurnos
           </span>
         </div>
       )}
